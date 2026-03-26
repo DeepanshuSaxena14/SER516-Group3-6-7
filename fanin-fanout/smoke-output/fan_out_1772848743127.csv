@@ -1,0 +1,5 @@
+metricType,scope,entity,value,packageName,filePath
+FAN_OUT,CLASS,simplejavacalculator.UI,13,simplejavacalculator,
+FAN_OUT,CLASS,simplejavacalculator.BufferedImageCustom,4,simplejavacalculator,
+FAN_OUT,CLASS,simplejavacalculator.SimpleJavaCalculator,1,simplejavacalculator,
+FAN_OUT,CLASS,simplejavacalculatorTest.CalculatorTest,1,simplejavacalculatorTest,

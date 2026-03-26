@@ -1,0 +1,57 @@
+services:
+  metrics-service:
+    build: .
+    ports:
+      - "${METRICS_PORT:-8080}:8080"
+    volumes:
+      - "${INPUT_DIR:-./input}:/input"
+    environment:
+      - "INPUT_PATH=/input"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS \"http://localhost:8080/metrics/fanout?path=$$INPUT_PATH/Simple-Java-Calculator/src\" || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-metrics
+    environment:
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: grafana
+      POSTGRES_DB: metrics
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./docker/init-fanout.sql:/docker-entrypoint-initdb.d/01-init-fanout.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U grafana -d metrics" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana-oss:11.5.1
+    container_name: grafana-metrics
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: marcusolsson-json-datasource
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      metrics-service:
+        condition: service_healthy

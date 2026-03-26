@@ -1,0 +1,4 @@
+rootProject.name = 'ser516-group3'
+
+include('AfferentEfferentService')
+

@@ -1,0 +1,33 @@
+.gradle/
+build/
+.gradle-cache/
+!AfferentEfferentService/gradlew
+!AfferentEfferentService/gradlew.bat
+!AfferentEfferentService/gradle/wrapper/gradle-wrapper.jar
+!AfferentEfferentService/gradle/wrapper/gradle-wrapper.properties
+*.class
+*.log
+*.ctxt
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+# Temporary files
+hs_err_pid*
+replay_pid*
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+.vscode/
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+logs/
+*.log
+.env
+.env.*
