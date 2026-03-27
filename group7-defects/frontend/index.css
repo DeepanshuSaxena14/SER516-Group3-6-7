@@ -1,0 +1,59 @@
+* {
+  font-family: "Times New Roman";
+  background-color: #c3ddfe;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 80vh;
+}
+
+h1 {
+  font-size: 3em;
+  margin-bottom: 0.5em;
+}
+
+p {
+  font-size: 1.5em;
+  margin-bottom: 2em;
+  text-align: center;
+  max-width: 600px;
+}
+
+.github-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+}
+
+button {
+  padding: 0.3em;
+  font-size: 0.8em;
+  background-color: #378cfb;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #022c64;
+  scale: 1.05;
+}
+
+input[type="text"] {
+  padding: 0.1em;
+  font-size: 0.8em;
+  border: 1px solid #5598f0;
+  border-radius: 5px;
+  margin-right: 1em;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border: 2px solid #73aefc;
+}
