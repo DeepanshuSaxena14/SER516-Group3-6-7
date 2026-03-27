@@ -22,18 +22,27 @@ Verify installation:
 ```bash
 docker --version
 docker compose version
+```
 
 # Start integrated services
+```bash
 docker compose up --build
+```
 
 # Check running containers
+```bash
 docker compose ps
+```
 
 # Run Group 3 manually
+```bash
 docker compose run --rm g3-ae-metrics
+```
 
 # Stop everything
+```bash
 docker compose down
+```
 
 ### Accessing Each Running Service
 
