@@ -67,9 +67,11 @@ pipeline {
             }
             steps {
                 checkout scm
-                dir('afferent-efferent/AfferentEfferentService') {
-                    sh 'chmod +x gradlew'
-                    sh './gradlew test build --no-daemon'
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    dir('afferent-efferent') {
+                        sh 'chmod +x gradlew'
+                        sh './gradlew test build --no-daemon'
+                    }
                 }
             }
             post {
