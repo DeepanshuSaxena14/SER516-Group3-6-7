@@ -2,75 +2,102 @@ pipeline {
     agent none
 
     options {
-        skipDefaultCheckout(true)
         timestamps()
     }
 
     stages {
-        stage('Checkout') {
-            agent any
+        stage('fanin-fanout — Build & Test') {
+            agent {
+                docker {
+                    image 'maven:3.9.6-eclipse-temurin-17'
+                    args '-v $JENKINS_HOME/.m2:/root/.m2:z'
+                }
+            }
             steps {
                 checkout scm
+                dir('fanin-fanout') {
+                    sh '''
+                        mvn -B -ntp clean verify \
+                            -Dmaven.test.failure.ignore=false \
+                            -Dmaven.repo.local=/root/.m2/repository
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'fanin-fanout/**/surefire-reports/*.xml',
+                          allowEmptyResults: false
+                }
             }
         }
 
-        stage('Build All Modules') {
-            parallel {
-                stage('fanin-fanout') {
-                    agent {
-                        docker {
-                            image 'maven:3.9.6-eclipse-temurin-17'
-                            args '-v $JENKINS_HOME/.m2:/root/.m2:z'
-                        }
-                    }
-                    steps {
-                        dir('fanin-fanout') {
-                            sh 'mvn -B -ntp clean verify'
-                            sh 'mvn -B -ntp exec:java -Dexec.args=". json out"'
-                            sh 'bash scripts/service-test.sh || true'
-                        }
-                    }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: 'fanin-fanout/out/**/*', fingerprint: true, allowEmptyArchive: true
-                            junit allowEmptyResults: true, testResults: 'fanin-fanout/target/surefire-reports/*.xml'
-                        }
-                    }
+        stage('fanin-fanout — Metrics Computation') {
+            agent {
+                docker {
+                    image 'maven:3.9.6-eclipse-temurin-17'
+                    args '-v $JENKINS_HOME/.m2:/root/.m2:z'
                 }
-
-                stage('afferent-efferent') {
-                    agent {
-                        docker {
-                            image 'gradle:8.7-jdk17'
-                        }
-                    }
-                    steps {
-                        dir('afferent-efferent/AfferentEfferentService') {
-                            sh './gradlew test build'
-                        }
-                        dir('afferent-efferent/TaigaService') {
-                            sh './gradlew test build'
-                        }
-                    }
+            }
+            steps {
+                checkout scm
+                dir('fanin-fanout') {
+                    sh '''
+                        mkdir -p metrics-output
+                        mvn -B -ntp exec:java \
+                            -Dexec.args=". metrics-output" \
+                            -Dmaven.repo.local=/root/.m2/repository
+                    '''
                 }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'fanin-fanout/metrics-output/**/*',
+                                     fingerprint: true,
+                                     allowEmptyArchive: true
+                }
+            }
+        }
 
-                stage('defects-discovered') {
-                    agent {
-                        docker {
-                            image 'node:20-bullseye'
-                        }
-                    }
-                    steps {
-                        dir('defects-discovered') {
-                            sh 'npm ci'
-                            sh 'npm test'
-                        }
-                    }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: 'defects-discovered/**/coverage/**/*', allowEmptyArchive: true
-                        }
-                    }
+        stage('afferent-efferent — Build & Test') {
+            agent {
+                docker {
+                    image 'gradle:8.7-jdk21'
+                    args '-u root'
+                }
+            }
+            steps {
+                checkout scm
+                dir('afferent-efferent/AfferentEfferentService') {
+                    sh 'chmod +x gradlew'
+                    sh './gradlew test build --no-daemon'
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'afferent-efferent/**/test-results/**/*.xml',
+                          allowEmptyResults: true
+                }
+            }
+        }
+
+        stage('defects-discovered — Build & Test') {
+            agent {
+                docker {
+                    image 'node:20-bullseye'
+                    args '-u root'
+                }
+            }
+            steps {
+                checkout scm
+                dir('defects-discovered') {
+                    sh 'npm ci'
+                    sh 'npm test'
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'defects-discovered/**/coverage/**/*',
+                                     allowEmptyArchive: true
                 }
             }
         }
@@ -84,7 +111,10 @@ pipeline {
             echo "All integrated modules built successfully."
         }
         failure {
-            echo "One or more modules failed."
+            echo "One or more modules failed — check stage logs above."
+        }
+        unstable {
+            echo "One or more modules are unstable — test failures detected."
         }
     }
 }
