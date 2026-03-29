@@ -1,0 +1,30 @@
+{
+  "name": "ser516-java-defects-detector",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/kmomar1/SER516-Java-Defects-Detector#readme",
+  "bugs": {
+    "url": "https://github.com/kmomar1/SER516-Java-Defects-Detector/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kmomar1/SER516-Java-Defects-Detector.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "mongoose": "^9.2.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
