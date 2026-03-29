@@ -21,6 +21,8 @@ public class MethodCouplingAnalyzer {
         this.sourceFiles = sourceFiles;
     }
 
+    @SuppressWarnings("unchecked") // JavaParser's findAncestor() uses a varargs Class<?>[] parameter that triggers
+                                   // "unchecked generic array creation" — this is a known library API limitation.
     public void analyze() {
         Map<Path, CompilationUnit> parsedUnits = new HashMap<>();
 
@@ -82,14 +84,14 @@ public class MethodCouplingAnalyzer {
 
     public Map<String, Integer> getFanOut() {
         return methodAdjacencyList.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().size()));
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
     }
 
     public Map<String, Integer> getFanIn() {
         Map<String, Integer> fanIn = new HashMap<>();
         projectMethods.forEach(m -> fanIn.put(m, 0));
-        methodAdjacencyList.values().forEach(callees ->
-                callees.forEach(callee -> {
+        methodAdjacencyList.values().forEach((Set<String> callees) ->
+                callees.forEach((String callee) -> {
                     if (fanIn.containsKey(callee)) {
                         fanIn.put(callee, fanIn.get(callee) + 1);
                     }
