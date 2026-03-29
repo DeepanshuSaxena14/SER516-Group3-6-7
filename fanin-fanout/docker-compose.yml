@@ -1,5 +1,6 @@
 services:
   metrics-service:
+    container_name: metrics-service
     build: .
     ports:
       - "${METRICS_PORT:-8080}:8080"

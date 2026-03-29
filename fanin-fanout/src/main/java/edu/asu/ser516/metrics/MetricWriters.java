@@ -53,6 +53,49 @@ public final class MetricWriters {
         }
     }
 
+    public static void writeFanInCsv(Map<String, Integer> fanIn, Path outFile)
+            throws IOException {
+
+        try (BufferedWriter w = Files.newBufferedWriter(outFile)) {
+            w.write("class,fanIn");
+            w.newLine();
+
+            for (Map.Entry<String, Integer> e : fanIn.entrySet()) {
+                w.write(csvEscape(e.getKey()));
+                w.write(",");
+                w.write(Integer.toString(e.getValue()));
+                w.newLine();
+            }
+        }
+    }
+
+    public static void writeFanInJson(Map<String, Integer> fanIn, Path outFile)
+            throws IOException {
+
+        try (BufferedWriter w = Files.newBufferedWriter(outFile)) {
+            w.write("[\n");
+
+            int i = 0;
+            int n = fanIn.size();
+
+            for (Map.Entry<String, Integer> e : fanIn.entrySet()) {
+                w.write("  {\"class\":\"");
+                w.write(jsonEscape(e.getKey()));
+                w.write("\",\"fanIn\":");
+                w.write(Integer.toString(e.getValue()));
+                w.write("}");
+
+                if (++i < n) {
+                    w.write(",");
+                }
+
+                w.write("\n");
+            }
+
+            w.write("]\n");
+        }
+    }
+
     private static String csvEscape(String s) {
         if (s == null) return "";
 
