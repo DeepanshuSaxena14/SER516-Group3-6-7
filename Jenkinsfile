@@ -70,7 +70,7 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     dir('afferent-efferent') {
                         sh 'chmod +x gradlew'
-                        sh './gradlew test build --no-daemon'
+                        sh './gradlew :AfferentEfferentService:test :AfferentEfferentService:shadowJar --no-daemon'
                     }
                 }
             }
