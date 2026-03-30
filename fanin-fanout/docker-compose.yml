@@ -1,5 +1,6 @@
 services:
   metrics-service:
+    container_name: metrics-service
     build: .
     ports:
       - "${METRICS_PORT:-8080}:8080"
@@ -22,7 +23,7 @@ services:
       POSTGRES_PASSWORD: grafana
       POSTGRES_DB: metrics
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5436}:5432"
     volumes:
       - ./docker/init-fanout.sql:/docker-entrypoint-initdb.d/01-init-fanout.sql:ro
     healthcheck:

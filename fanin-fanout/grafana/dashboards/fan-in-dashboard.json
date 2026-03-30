@@ -2,7 +2,7 @@
     "annotations": {
         "list": []
     },
-    "description": "Visualizes class-level fan-out metrics for Sprint Review. Fan-out measures how many other classes each class depends on \u2014 high values may indicate tight coupling.",
+    "description": "Visualizes class-level fan-in metrics for Sprint Review. Fan-in measures how many other classes depend on each class — high values indicate core/utility classes where changes have wide impact.",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 1,
@@ -11,8 +11,8 @@
     "panels": [
         {
             "id": 10,
-            "title": "Highest Fan-Out",
-            "description": "Maximum fan-out value across all classes in the latest run.",
+            "title": "Highest Fan-In",
+            "description": "Maximum fan-in value across all classes in the latest run.",
             "type": "stat",
             "gridPos": {
                 "h": 4,
@@ -38,11 +38,11 @@
                             },
                             {
                                 "color": "yellow",
-                                "value": 5
+                                "value": 3
                             },
                             {
                                 "color": "red",
-                                "value": 10
+                                "value": 6
                             }
                         ]
                     }
@@ -72,15 +72,15 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT MAX(fan_out) AS \"Max Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics);",
+                    "rawSql": "SELECT MAX(fan_in) AS \"Max Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics);",
                     "refId": "A"
                 }
             ]
         },
         {
             "id": 11,
-            "title": "Average Fan-Out",
-            "description": "Average fan-out value across all classes in the latest run.",
+            "title": "Average Fan-In",
+            "description": "Average fan-in value across all classes in the latest run.",
             "type": "stat",
             "gridPos": {
                 "h": 4,
@@ -107,11 +107,11 @@
                             },
                             {
                                 "color": "yellow",
-                                "value": 3
+                                "value": 2
                             },
                             {
                                 "color": "red",
-                                "value": 7
+                                "value": 4
                             }
                         ]
                     }
@@ -141,7 +141,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT ROUND(AVG(fan_out)::numeric, 1) AS \"Avg Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics);",
+                    "rawSql": "SELECT ROUND(AVG(fan_in)::numeric, 1) AS \"Avg Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics);",
                     "refId": "A"
                 }
             ]
@@ -202,7 +202,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT COUNT(*) AS \"Classes\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics);",
+                    "rawSql": "SELECT COUNT(*) AS \"Classes\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics);",
                     "refId": "A"
                 }
             ]
@@ -210,7 +210,7 @@
         {
             "id": 13,
             "title": "Last Analysis Run",
-            "description": "Timestamp of the most recent fan-out analysis run.",
+            "description": "Timestamp of the most recent fan-in analysis run.",
             "type": "stat",
             "gridPos": {
                 "h": 4,
@@ -263,15 +263,15 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM fan_out_metrics;",
+                    "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM fan_in_metrics;",
                     "refId": "A"
                 }
             ]
         },
         {
             "id": 1,
-            "title": "Fan-Out per Class (Bar Chart)",
-            "description": "Displays fan-out values for each class from the latest analysis run. Classes are sorted by fan-out descending.",
+            "title": "Fan-In per Class (Bar Chart)",
+            "description": "Displays fan-in values for each class from the latest analysis run. Classes are sorted by fan-in descending.",
             "type": "barchart",
             "gridPos": {
                 "h": 12,
@@ -291,7 +291,7 @@
                     "custom": {
                         "axisBorderShow": false,
                         "axisCenteredZero": false,
-                        "axisLabel": "Fan-Out Count",
+                        "axisLabel": "Fan-In Count",
                         "axisPlacement": "auto",
                         "fillOpacity": 80,
                         "gradientMode": "scheme",
@@ -309,11 +309,11 @@
                             },
                             {
                                 "color": "yellow",
-                                "value": 5
+                                "value": 3
                             },
                             {
                                 "color": "red",
-                                "value": 10
+                                "value": 6
                             }
                         ]
                     }
@@ -345,15 +345,15 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT class_name AS \"Class\", fan_out AS \"Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics)\n  AND fan_out >= ${min_fanout}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_out DESC;",
+                    "rawSql": "SELECT class_name AS \"Class\", fan_in AS \"Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\n  AND fan_in >= ${min_fanin}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_in DESC;",
                     "refId": "A"
                 }
             ]
         },
         {
             "id": 2,
-            "title": "Fan-Out Metrics Table",
-            "description": "Table view of fan-out values per class from the latest run. Sorted by fan-out descending.",
+            "title": "Fan-In Metrics Table",
+            "description": "Table view of fan-in values per class from the latest run. Sorted by fan-in descending.",
             "type": "table",
             "gridPos": {
                 "h": 10,
@@ -386,11 +386,11 @@
                             },
                             {
                                 "color": "yellow",
-                                "value": 5
+                                "value": 3
                             },
                             {
                                 "color": "red",
-                                "value": 10
+                                "value": 6
                             }
                         ]
                     }
@@ -399,7 +399,7 @@
                     {
                         "matcher": {
                             "id": "byName",
-                            "options": "Fan-Out"
+                            "options": "Fan-In"
                         },
                         "properties": [
                             {
@@ -415,7 +415,7 @@
                             },
                             {
                                 "id": "max",
-                                "value": 20
+                                "value": 15
                             }
                         ]
                     }
@@ -430,7 +430,7 @@
                 "sortBy": [
                     {
                         "desc": true,
-                        "displayName": "Fan-Out"
+                        "displayName": "Fan-In"
                     }
                 ]
             },
@@ -443,15 +443,15 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT class_name AS \"Class\", fan_out AS \"Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics)\n  AND fan_out >= ${min_fanout}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_out DESC;",
+                    "rawSql": "SELECT class_name AS \"Class\", fan_in AS \"Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\n  AND fan_in >= ${min_fanin}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_in DESC;",
                     "refId": "A"
                 }
             ]
         },
         {
             "id": 3,
-            "title": "Fan-Out Trend Over Time",
-            "description": "Shows how fan-out values change across analysis runs. Each line represents a class.",
+            "title": "Fan-In Trend Over Time",
+            "description": "Shows how fan-in values change across analysis runs. Each line represents a class.",
             "type": "timeseries",
             "gridPos": {
                 "h": 10,
@@ -469,7 +469,7 @@
                         "mode": "palette-classic"
                     },
                     "custom": {
-                        "axisLabel": "Fan-Out",
+                        "axisLabel": "Fan-In",
                         "axisPlacement": "auto",
                         "drawStyle": "line",
                         "fillOpacity": 10,
@@ -489,7 +489,7 @@
                             },
                             {
                                 "color": "red",
-                                "value": 10
+                                "value": 6
                             }
                         ]
                     }
@@ -515,7 +515,7 @@
                     "editorMode": "code",
                     "format": "time_series",
                     "rawQuery": true,
-                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_out\nFROM fan_out_metrics\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
+                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_in\nFROM fan_in_metrics\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
                     "refId": "A"
                 }
             ]
@@ -523,7 +523,7 @@
     ],
     "schemaVersion": 39,
     "tags": [
-        "fan-out",
+        "fan-in",
         "metrics",
         "sprint-review"
     ],
@@ -535,10 +535,10 @@
                     "text": "0",
                     "value": "0"
                 },
-                "description": "Show only classes with fan-out >= this value. Set to 0 to show all.",
+                "description": "Show only classes with fan-in >= this value. Set to 0 to show all.",
                 "hide": 0,
-                "label": "Min Fan-Out",
-                "name": "min_fanout",
+                "label": "Min Fan-In",
+                "name": "min_fanin",
                 "options": [
                     {
                         "selected": true,
@@ -552,21 +552,21 @@
                     },
                     {
                         "selected": false,
-                        "text": "3",
-                        "value": "3"
+                        "text": "2",
+                        "value": "2"
                     },
                     {
                         "selected": false,
-                        "text": "5",
-                        "value": "5"
+                        "text": "4",
+                        "value": "4"
                     },
                     {
                         "selected": false,
-                        "text": "10",
-                        "value": "10"
+                        "text": "6",
+                        "value": "6"
                     }
                 ],
-                "query": "0,1,3,5,10",
+                "query": "0,1,2,4,6",
                 "type": "custom"
             },
             {
@@ -597,7 +597,7 @@
     },
     "timepicker": {},
     "timezone": "browser",
-    "title": "Fan-Out Metrics Dashboard",
-    "uid": "fan-out-metrics",
-    "version": 3
+    "title": "Fan-In Metrics Dashboard",
+    "uid": "fan-in-metrics",
+    "version": 1
 }

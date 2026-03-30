@@ -151,8 +151,8 @@ The multi-stage build compiles the project inside a Maven container and produces
 You can customize ports and host paths used by Docker Compose via the `.env` file in the project root:
 
 ```bash
-METRICS_PORT=8080
-GRAFANA_PORT=3000
+METRICS_PORT=8086
+GRAFANA_PORT=3006
 INPUT_DIR=./input
 GRAFANA_PROVISIONING_DIR=./grafana/provisioning
 ```
@@ -176,14 +176,14 @@ This will build and start both the metrics service and Grafana using the configu
 ```bash
 docker run --rm \
   -v "$(pwd)/input:/input" \
-  -p 8080:8080 \
+  -p 8086:8080 \
   ser516-metrics
 ```
 
 Expected startup output:
 ```
-[main] INFO io.javalin.Javalin - Listening on http://localhost:8080/
-Metrics API server started on port 8080
+[main] INFO io.javalin.Javalin - Listening on http://localhost:8086/
+Metrics API server started on port 8086
 ```
 
 > **macOS/Linux note:** The quotes around `"$(pwd)/input:/input"` are required to handle uppercase letters or spaces in your directory path.
@@ -194,7 +194,7 @@ Open a second terminal while the container is running:
 
 **Fan-Out for the sample project:**
 ```bash
-curl "http://localhost:8080/metrics/fanout?path=/input/Simple-Java-Calculator/src"
+curl "http://localhost:8086/metrics/fanout?path=/input/Simple-Java-Calculator/src"
 ```
 
 Expected response:
@@ -209,7 +209,7 @@ Expected response:
 
 **Fan-In for the sample project:**
 ```bash
-curl "http://localhost:8080/metrics/fanin?path=/input/Simple-Java-Calculator/src"
+curl "http://localhost:8086/metrics/fanin?path=/input/Simple-Java-Calculator/src"
 ```
 
 ### Step 5 — Stop the container
@@ -230,14 +230,14 @@ To analyze a Java project on your host machine, mount its source directory as a 
 ```bash
 docker run --rm \
   -v "/absolute/path/to/your/project/src:/project" \
-  -p 8080:8080 \
+  -p 8086:8080 \
   ser516-metrics
 ```
 
 Then query using the container-side path:
 ```bash
-curl "http://localhost:8080/metrics/fanout?path=/project"
-curl "http://localhost:8080/metrics/fanin?path=/project"
+curl "http://localhost:8086/metrics/fanout?path=/project"
+curl "http://localhost:8086/metrics/fanin?path=/project"
 ```
 
 The rule is: whatever local path you mount to the **left** of the `:` in `-v`, use the **right-hand side** path in the `?path=` query parameter.
@@ -246,7 +246,7 @@ The rule is: whatever local path you mount to the **left** of the `:` in `-v`, u
 
 ## Changing the Port
 
-The server defaults to port `8080`. To use a different port, pass the `PORT` environment variable:
+The server defaults to port `8080` (mapped to `8086` in Docker). To use a different port, pass the `PORT` environment variable:
 
 ```bash
 docker run --rm \
@@ -351,7 +351,7 @@ java -jar target/ser516-group6-metrics-1.0.0.jar
 
 Query it using your local filesystem path:
 ```bash
-curl "http://localhost:8080/metrics/fanout?path=$(pwd)/input/Simple-Java-Calculator/src"
+curl "http://localhost:8086/metrics/fanout?path=$(pwd)/input/Simple-Java-Calculator/src"
 ```
 
 ### Step 3 — Run via CLI (no server)
@@ -480,7 +480,7 @@ docker exec -e JDBC_URL="jdbc:postgresql://postgres-metrics:5432/metrics" -e JDB
 ```
 
 ### 3. View the Dashboards
-Navigate to **http://localhost:3000** (Login: `admin` / `admin`). Data will automatically show in the provisioned dashboards.
+Navigate to **http://localhost:3006** (Login: `admin` / `admin`). Data will automatically show in the provisioned dashboards.
 
 ## CI/CD - Jenkins Integration
 This project includes:

@@ -1,0 +1,86 @@
+services:
+  g6-metrics:
+    build: ./fanin-fanout
+    ports:
+      - "${G6_METRICS_PORT:-8082}:8080"
+    volumes:
+      - "${INPUT_DIR:-./fanin-fanout/input}:/input"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:8080/metrics/fanout?path=/input/Simple-Java-Calculator/src || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  g6-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: grafana
+      POSTGRES_DB: metrics
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./fanin-fanout/docker/init-fanout.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grafana -d metrics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  g6-grafana:
+    image: grafana/grafana-oss:11.5.1
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: marcusolsson-json-datasource
+    volumes:
+      - ./fanin-fanout/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./fanin-fanout/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      g6-postgres:
+        condition: service_healthy
+      g6-metrics:
+        condition: service_healthy
+
+  g7-pmd:
+    build: ./defects-discovered/pmd
+    ports:
+      - "${G7_PMD_PORT:-4000}:4000"
+    volumes:
+      - g7-workdata:/app/work
+
+  g7-frontend:
+    build: ./defects-discovered/frontend
+    ports:
+      - "${G7_FRONTEND_PORT:-8081}:80"
+    depends_on:
+      - g7-pmd
+
+  g7-mongo:
+    build:
+      context: ./defects-discovered/mongo
+      dockerfile: Dockerfile
+    ports:
+      - "${G7_MONGO_PORT:-4001}:${G7_MONGO_PORT:-4001}"
+    environment:
+      - PORT=4001
+      - MONGO_URI=mongodb+srv://sobinsalman_db_user:zhPODvOJyBjtondA@ser516.88mmzgx.mongodb.net/?appName=ser516
+
+  g3-ae-metrics:
+    build: ./afferent-efferent/AfferentEfferentService
+    profiles: ["manual"]
+    stdin_open: true
+    tty: true
+    volumes:
+      - g3-storage:/app/storage
+
+volumes:
+  g7-workdata:
+  g3-storage:

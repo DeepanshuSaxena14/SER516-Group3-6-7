@@ -50,4 +50,40 @@ public final class MetricDbWriter {
             System.err.println("DB write failed: " + ex.getMessage());
         }
     }
+
+    /**
+     * Inserts the current fan-in snapshot into fan_in_metrics.
+     * Each run uses a single timestamp (DB default NOW()).
+     * No-op if JDBC_URL is not set.
+     *
+     * @param fanIn map from class name to fan-in count
+     */
+    public static void writeFanIn(Map<String, Integer> fanIn) {
+        String url = System.getenv("JDBC_URL");
+        if (url == null || url.isBlank()) {
+            return;
+        }
+
+        String user = System.getenv("JDBC_USER");
+        String password = System.getenv("JDBC_PASSWORD");
+
+        String sql = "INSERT INTO fan_in_metrics (class_name, scope, fan_in) VALUES (?, ?, ?)";
+
+        try (Connection conn = user != null && !user.isBlank()
+                ? DriverManager.getConnection(url, user, password != null ? password : "")
+                : DriverManager.getConnection(url);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            for (Map.Entry<String, Integer> e : fanIn.entrySet()) {
+                ps.setString(1, e.getKey());
+                ps.setString(2, SCOPE_CLASS);
+                ps.setInt(3, e.getValue());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            System.out.println("Wrote " + fanIn.size() + " fan-in rows to database.");
+        } catch (Exception ex) {
+            System.err.println("DB write failed: " + ex.getMessage());
+        }
+    }
 }
