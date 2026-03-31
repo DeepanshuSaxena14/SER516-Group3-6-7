@@ -55,21 +55,25 @@ class JsonMetricExporterTest {
 
         assertNotNull(root);
 
-        assertTrue(root.has("metric"));
-        assertTrue(root.has("scope"));
+        assertTrue(root.has("exportType"));
+        assertTrue(root.has("rowCount"));
         assertTrue(root.has("results"));
 
-        assertEquals("FAN_OUT", root.get("metric").asText());
-        assertEquals("CLASS", root.get("scope").asText());
+        assertEquals("METRICS", root.get("exportType").asText());
+        assertEquals(1, root.get("rowCount").asInt());
 
         JsonNode results = root.get("results");
         assertTrue(results.isArray());
         assertEquals(1, results.size());
 
         JsonNode first = results.get(0);
+        assertTrue(first.has("metricType"));
+        assertTrue(first.has("scope"));
         assertTrue(first.has("entity"));
         assertTrue(first.has("value"));
 
+        assertEquals("FAN_OUT", first.get("metricType").asText());
+        assertEquals("CLASS", first.get("scope").asText());
         assertEquals("edu.asu.Calculator", first.get("entity").asText());
         assertEquals(3, first.get("value").asInt());
     }
@@ -85,12 +89,16 @@ class JsonMetricExporterTest {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(content);
 
+        assertTrue(root.has("exportType"));
+        assertTrue(root.has("rowCount"));
         assertTrue(root.has("results"));
+        assertEquals("METRICS", root.get("exportType").asText());
+        assertEquals(0, root.get("rowCount").asInt());
         assertEquals(0, root.get("results").size());
     }
 
     @Test
-    void shouldSerializeResultsInDescendingOrderByValue() throws Exception {
+    void shouldSerializeResultsInExpectedOrder() throws Exception {
         Path tempDir = Files.createTempDirectory("json-metrics-test");
 
         List<MetricRow> rows = List.of(
