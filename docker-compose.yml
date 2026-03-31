@@ -55,13 +55,20 @@ services:
       - "${G7_PMD_PORT:-4000}:4000"
     volumes:
       - g7-workdata:/app/work
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s  
 
   g7-frontend:
     build: ./defects-discovered/frontend
     ports:
       - "${G7_FRONTEND_PORT:-8081}:80"
     depends_on:
-      - g7-pmd
+      g7-pmd :
+       condition: service_healthy
 
   g7-mongo:
     build:
