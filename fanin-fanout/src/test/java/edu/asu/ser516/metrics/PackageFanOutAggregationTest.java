@@ -1,61 +1,84 @@
 package edu.asu.ser516.metrics;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class PackageFanOutAggregationTest {
 
-    private static final Path SAMPLE =
-            Path.of("input/Simple-Java-Calculator/src");
+    @TempDir
+    Path tempDir;
 
-    @Test
-    void emptyInputProducesEmptyPackageFanOut() {
-        CouplingAnalyzer analyzer = new CouplingAnalyzer(Path.of("input/empty"));
-        analyzer.analyze();
-
-        Map<String, Integer> pkgFanOut = analyzer.getPackageFanOut(); // DOES NOT EXIST YET
-
-        assertTrue(pkgFanOut.isEmpty(),
-                "Empty input should produce empty package-level fan-out");
+    private List<Path> javaFilesUnder(Path root) throws IOException {
+        return Files.walk(root)
+                .filter(p -> p.toString().endsWith(".java"))
+                .toList();
     }
 
     @Test
-    void sampleProjectProducesPackageFanOut() {
-        CouplingAnalyzer analyzer = new CouplingAnalyzer(SAMPLE);
+    void emptyInputProducesEmptyPackageFanOut() throws Exception {
+        Path emptyRoot = Files.createDirectory(tempDir.resolve("empty"));
+
+        CouplingAnalyzer analyzer = new CouplingAnalyzer(javaFilesUnder(emptyRoot));
+        analyzer.analyze();
+
+        Map<String, Integer> pkgFanOut = analyzer.getPackageFanOut();
+
+        assertTrue(pkgFanOut.isEmpty(),
+                "Empty input should produce an empty package-level fan-out map");
+    }
+
+    @Test
+    void sampleProjectProducesPackageFanOut() throws Exception {
+        Path sampleRoot = Path.of("input/Simple-Java-Calculator/src");
+
+        CouplingAnalyzer analyzer = new CouplingAnalyzer(javaFilesUnder(sampleRoot));
         analyzer.analyze();
 
         Map<String, Integer> pkgFanOut = analyzer.getPackageFanOut();
 
         assertFalse(pkgFanOut.isEmpty(),
-                "Sample project should produce package-level fan-out");
+                "Sample project should produce package-level fan-out entries");
     }
 
     @Test
-    void keysArePackageNamesNotClassNames() {
-        CouplingAnalyzer analyzer = new CouplingAnalyzer(SAMPLE);
+    void keysArePackageNamesNotClassNames() throws Exception {
+        Path sampleRoot = Path.of("input/Simple-Java-Calculator/src");
+
+        CouplingAnalyzer analyzer = new CouplingAnalyzer(javaFilesUnder(sampleRoot));
         analyzer.analyze();
 
         Map<String, Integer> pkgFanOut = analyzer.getPackageFanOut();
 
-        // Expect package name like "simplejavacalculator"
-        assertTrue(pkgFanOut.keySet().stream()
-                        .anyMatch(k -> k.contains("simplejavacalculator")),
-                "Expected package-level key, not class-level key");
+        assertTrue(
+                pkgFanOut.keySet().stream().anyMatch(k -> k.contains("simplejavacalculator")),
+                "Package-level keys should use package names, not class names");
     }
 
     @Test
-    void aggregationCollapsesMultipleClassesIntoSinglePackage() {
-        CouplingAnalyzer analyzer = new CouplingAnalyzer(SAMPLE);
+    void aggregationCollapsesMultipleClassEntries() throws Exception {
+        Path sampleRoot = Path.of("input/Simple-Java-Calculator/src");
+
+        CouplingAnalyzer analyzer = new CouplingAnalyzer(javaFilesUnder(sampleRoot));
         analyzer.analyze();
 
         Map<String, Integer> classFanOut = analyzer.getFanOut();
         Map<String, Integer> pkgFanOut = analyzer.getPackageFanOut();
 
-        assertTrue(pkgFanOut.size() < classFanOut.size(),
-                "Package-level aggregation should reduce number of entries");
+        assertTrue(
+                pkgFanOut.size() < classFanOut.size(),
+                "Package-level aggregation should reduce the number of entries");
+    }
+
+    public Map<String, Integer> getPackageFanOut() {
+        return Collections.emptyMap();
     }
 }
