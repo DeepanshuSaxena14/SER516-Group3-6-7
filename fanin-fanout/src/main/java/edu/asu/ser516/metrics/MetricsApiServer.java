@@ -74,6 +74,8 @@ public final class MetricsApiServer {
 
         try {
             List<Path> javaFiles = SourceScanner.findJavaFiles(root);
+
+            // Class-level Fan-In via CouplingAnalyzer
             CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
             classAnalyzer.analyze();
             Map<String, Integer> classLevelFanIn = classAnalyzer.getFanIn()
@@ -84,6 +86,10 @@ public final class MetricsApiServer {
                             Map.Entry::getValue,
                             (e1, e2) -> e1,
                             LinkedHashMap::new));
+
+            MetricDbWriter.writeFanIn(classLevelFanIn);
+
+            // Method-level Fan-In via MethodCouplingAnalyzer
             MethodCouplingAnalyzer methodAnalyzer = new MethodCouplingAnalyzer(javaFiles);
             methodAnalyzer.analyze();
             Map<String, Integer> methodLevelFanIn = methodAnalyzer.getFanIn()
@@ -94,8 +100,6 @@ public final class MetricsApiServer {
                             Map.Entry::getValue,
                             (e1, e2) -> e1,
                             LinkedHashMap::new));
-            MetricDbWriter.writeFanIn(classLevelFanIn);                    // scope='class'
-            MetricDbWriter.writeFanIn(methodLevelFanIn, "method");         // scope='method'
 
             ctx.json(toUnifiedFanInJson(classLevelFanIn, methodLevelFanIn));
 
@@ -156,6 +160,7 @@ public final class MetricsApiServer {
                                              Map<String, Integer> methodLevel) {
         StringBuilder sb = new StringBuilder("{\n");
 
+        // classLevel array
         sb.append("  \"classLevel\": [\n");
         int i = 0, n = classLevel.size();
         for (Map.Entry<String, Integer> e : classLevel.entrySet()) {
@@ -169,6 +174,7 @@ public final class MetricsApiServer {
         }
         sb.append("  ],\n");
 
+        // methodLevel array
         sb.append("  \"methodLevel\": [\n");
         i = 0; n = methodLevel.size();
         for (Map.Entry<String, Integer> e : methodLevel.entrySet()) {
