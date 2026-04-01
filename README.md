@@ -105,7 +105,13 @@ The healthcheck auto-triggers Fan-Out on startup, but Fan-In must be called manu
 ```bash
 curl "http://localhost:8082/metrics/fanin?path=/input/Simple-Java-Calculator/src"
 ```
- 
+
+```Windows OS
+Run the below API endpoints on Postman
+GET http://localhost:8082/metrics/fanout?path=/input/Simple-Java-Calculator/src
+GET http://localhost:8082/metrics/fanin?path=/input/Simple-Java-Calculator/src
+```
+
 Expected response (truncated):
 ```json
 {
