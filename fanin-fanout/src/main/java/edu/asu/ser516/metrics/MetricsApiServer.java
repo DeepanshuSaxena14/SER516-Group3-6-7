@@ -55,6 +55,7 @@ public final class MetricsApiServer {
                     ));
 
             MetricDbWriter.writeFanOut(sorted);
+
             ctx.json(toFanOutJsonArray(sorted));
 
         } catch (IOException e) {
@@ -122,16 +123,12 @@ public final class MetricsApiServer {
 
         if (!Files.exists(root)) {
             ctx.status(400);
-            throw new IllegalArgumentException(
-                    "Path does not exist: " + pathParam
-            );
+            throw new IllegalArgumentException("Path does not exist: " + pathParam);
         }
 
         if (!Files.isDirectory(root)) {
             ctx.status(400);
-            throw new IllegalArgumentException(
-                    "Path is not a directory: " + pathParam
-            );
+            throw new IllegalArgumentException("Path is not a directory: " + pathParam);
         }
 
         return root;
@@ -145,8 +142,7 @@ public final class MetricsApiServer {
 
     private static String toFanOutJsonArray(Map<String, Integer> fanOut) {
         StringBuilder sb = new StringBuilder("[\n");
-        int i = 0;
-        int n = fanOut.size();
+        int i = 0, n = fanOut.size();
         for (Map.Entry<String, Integer> e : fanOut.entrySet()) {
             sb.append("  {\"class\":\"")
                     .append(jsonEscape(e.getKey()))
