@@ -77,8 +77,4 @@ class PackageFanOutAggregationTest {
                 pkgFanOut.size() < classFanOut.size(),
                 "Package-level aggregation should reduce the number of entries");
     }
-
-    public Map<String, Integer> getPackageFanOut() {
-        return Collections.emptyMap();
-    }
 }
