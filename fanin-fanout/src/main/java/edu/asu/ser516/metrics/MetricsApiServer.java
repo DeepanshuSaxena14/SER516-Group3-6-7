@@ -54,6 +54,7 @@ public final class MetricsApiServer {
                             LinkedHashMap::new
                     ));
 
+            MetricDbWriter.writeFanOut(sorted);
             ctx.json(toFanOutJsonArray(sorted));
 
         } catch (IOException e) {
@@ -84,6 +85,8 @@ public final class MetricsApiServer {
                             Map.Entry::getValue,
                             (e1, e2) -> e1,
                             LinkedHashMap::new));
+
+            MetricDbWriter.writeFanIn(classLevelFanIn);
 
             // Method-level Fan-In via MethodCouplingAnalyzer
             MethodCouplingAnalyzer methodAnalyzer = new MethodCouplingAnalyzer(javaFiles);
