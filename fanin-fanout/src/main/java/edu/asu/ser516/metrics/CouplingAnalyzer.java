@@ -132,6 +132,17 @@ public class CouplingAnalyzer {
     }
 
     public Map<String, Integer> getPackageFanOut() {
-        return Collections.emptyMap();
+        Map<String, Integer> classFanOut = getFanOut();
+        Map<String, Integer> packageFanOut = new HashMap<>();
+
+        for(Map.Entry<String, Integer> entry : classFanOut.entrySet()) {
+            String className = entry.getKey();
+            int fanOut = entry.getValue();
+
+            String packageName = className.contains(".") ? className.substring(0, className.lastIndexOf('.')) : "(default)";
+            packageFanOut.merge(packageName, fanOut, Integer::sum);
+        }
+
+        return packageFanOut;
     }
 }
