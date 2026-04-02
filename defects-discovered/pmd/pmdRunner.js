@@ -2,7 +2,22 @@ import fs from 'fs';
 import shell from "shelljs";
 import path from "path";
 
-export const runPMD = (repoPath, reportPath) => {
+const PMD_TIMEOUT_MS = 120000; //120 seconds
+
+const execWithTimeout = (command, timeoutMs) => {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(`Command timed out after ${timeoutMs / 1000}s: ${command}`));
+        }, timeoutMs);
+
+        shell.exec(command, { silent: true, async: true }, (code, stdout, stderr) => {
+            clearTimeout(timer);
+            resolve({ code, stdout, stderr });
+        });
+    });
+};
+
+export const runPMD = async (repoPath, reportPath) => {
     shell.mkdir("-p", path.dirname(reportPath));
 
     console.log("Running PMD analysis...");
@@ -15,7 +30,7 @@ export const runPMD = (repoPath, reportPath) => {
         `-f json -r "${reportPath}" ` +
         `--no-fail-on-error --no-cache`;
 
-    const result = shell.exec(command, { silent: true });
+    const result = await execWithTimeout(command, PMD_TIMEOUT_MS);
     console.log("PMD analysis complete.");
 
     if (result.code !== 0 && result.code !== 4) {
