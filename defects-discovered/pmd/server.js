@@ -1,8 +1,19 @@
+import express from "express"
 import dotenv from "dotenv"
-import app from "./app.js";
+import cors from "cors"
+import githubRoutes from "./routes/GithubRoutes.js"
+import pmdRoutes from "./routes/PmdRoutes.js"
 
-dotenv.config();
+dotenv.config()
 
-const PORT = process.env.PORT || 4000 
+const PORT = process.env.PORT || 8080 
+const server = express()
 
-app.listen(PORT, () => console.log(`Running on port ${PORT}`))
+server.use(cors())
+server.use(express.json())
+
+server.use("/api/github", githubRoutes)
+server.use("/api/pmd", pmdRoutes)
+
+server.listen(PORT, () => console.log(`Running on port ${PORT}`))
+

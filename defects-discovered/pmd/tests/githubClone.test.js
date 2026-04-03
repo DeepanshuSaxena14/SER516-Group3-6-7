@@ -60,7 +60,7 @@ describe("POST /api/github/clone", () => {
         expect(res.body.message).toMatch(/github_link/i);
     });
 
-    it("returns 200 when clone succeeds and report exists", async () => {
+    it("returns 200 when clone succeeds", async () => {
         shelljs.exec.mockReturnValue({ code: 0, stdout: "", stderr: "" });
 
         const res = await request(app)
@@ -68,20 +68,19 @@ describe("POST /api/github/clone", () => {
             .send({ github_link: "https://github.com/junit-team/junit-framework.git" });
 
         expect(res.status).toBe(200);
-        expect(res.body.pmd).toEqual({ ok: true });
 
         expect(shelljs.exec).toHaveBeenCalledTimes(1);
         expect(shelljs.exec.mock.calls[0][0]).toContain("git clone");
     });
 
-    it("returns 400 when clone fails", async () => {
+    it("returns 500 when clone fails", async () => {
         shelljs.exec.mockReturnValue({ code: 1, stdout: "", stderr: "boom" });
 
         const res = await request(app)
             .post("/api/github/clone")
             .send({ github_link: "https://github.com/example/repo.git" });
 
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(500);
         expect(res.body.message).toMatch(/failed/i);
     });
 });
