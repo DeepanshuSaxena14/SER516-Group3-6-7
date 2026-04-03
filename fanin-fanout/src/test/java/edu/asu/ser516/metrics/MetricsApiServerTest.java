@@ -11,7 +11,8 @@ import java.util.Objects;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MetricsApiServerTest {
-    private static final String ProjectPath = Paths.get("input", "Simple-Java-Calculator", "src").toAbsolutePath().toString();
+    private static final String ProjectPath = Paths.get("input", "Simple-Java-Calculator", "src").toAbsolutePath()
+            .toString();
 
     @Nested
     @DisplayName("GET /metrics/fanout")
@@ -34,8 +35,7 @@ class MetricsApiServerTest {
                 assertTrue(
                         Objects.requireNonNull(response.header("Content-Type")).contains("application/json"),
                         "Expected Content-Type to contain application/json but got: "
-                                + response.header("Content-Type")
-                );
+                                + response.header("Content-Type"));
             });
         }
 
@@ -47,7 +47,7 @@ class MetricsApiServerTest {
                 assertNotNull(response.body());
                 String body = response.body().string();
                 assertTrue(body.trim().startsWith("["), "Response should be a JSON array");
-                assertTrue(body.trim().length() > 2,   "JSON array should not be empty");
+                assertTrue(body.trim().length() > 2, "JSON array should not be empty");
             });
         }
 
@@ -96,8 +96,7 @@ class MetricsApiServerTest {
                 String body = response.body().string();
                 assertTrue(
                         body.contains("\"error\""),
-                        "Error response must contain an 'error' field, got: " + body
-                );
+                        "Error response must contain an 'error' field, got: " + body);
             });
         }
 
@@ -220,6 +219,50 @@ class MetricsApiServerTest {
                 assertEquals(body1, body2,
                         "Repeated requests for the same path must return identical results");
             });
+
+            @Nested
+            @DisplayName("GET /metrics/fanin with scope")
+            class FanInScope {
+
+                @Test
+                @DisplayName("scope=class returns HTTP 200")
+                void returns200ForClassScope() {
+                    JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                        var response = client.get("/metrics/fanin?path=" + ProjectPath + "&scope=class");
+                        assertEquals(200, response.code());
+                        assertNotNull(response.body());
+                        String body = response.body().string();
+                        assertTrue(body.contains("\"classLevel\"") || body.contains("\"class\""));
+                    });
+                }
+
+                @Test
+                @DisplayName("scope=package returns HTTP 200")
+                void returns200ForPackageScope() {
+                    JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                        var response = client.get("/metrics/fanin?path=" + ProjectPath + "&scope=package");
+                        assertEquals(200, response.code());
+                    });
+                }
+
+                @Test
+                @DisplayName("scope=project returns HTTP 200")
+                void returns200ForProjectScope() {
+                    JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                        var response = client.get("/metrics/fanin?path=" + ProjectPath + "&scope=project");
+                        assertEquals(200, response.code());
+                    });
+                }
+
+                @Test
+                @DisplayName("invalid scope returns HTTP 400")
+                void invalidScopeReturns400() {
+                    JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                        var response = client.get("/metrics/fanin?path=" + ProjectPath + "&scope=banana");
+                        assertEquals(400, response.code());
+                    });
+                }
+            }
         }
     }
 
