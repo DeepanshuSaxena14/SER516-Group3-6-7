@@ -12,6 +12,13 @@ public final class MetricDbWriter {
     private MetricDbWriter() {}
 
     public static void writeFanOut(Map<String, Integer> fanOut) {
+        writeFanOut(fanOut, SCOPE_CLASS);
+    }
+
+    /**
+     * @param scope row scope stored in {@code fan_out_metrics.scope} (e.g. class, package, project)
+     */
+    public static void writeFanOut(Map<String, Integer> fanOut, String scope) {
         String url = System.getenv("JDBC_URL");
         if (url == null || url.isBlank()) return;
 
@@ -22,7 +29,7 @@ public final class MetricDbWriter {
 
             for (Map.Entry<String, Integer> e : fanOut.entrySet()) {
                 ps.setString(1, e.getKey());
-                ps.setString(2, SCOPE_CLASS);
+                ps.setString(2, scope);
                 ps.setInt(3, e.getValue());
                 ps.addBatch();
             }
