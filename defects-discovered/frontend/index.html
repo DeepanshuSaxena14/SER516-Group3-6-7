@@ -23,6 +23,19 @@
           <input type="text" id="github-link" name="github_link" required />
           <button type="submit">Analyse</button>
         </form>
+        <div
+          id="analysis-status"
+          class="analysis-status hidden"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Analyzing repository...</span>
+        </div>
+        <div id="result-placeholder" class="result-placeholder hidden">
+          <span class="result-label">Result:</span>
+          <a href="#" class="result-link">Add result link here</a>
+        </div>
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
