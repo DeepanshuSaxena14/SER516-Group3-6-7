@@ -17,7 +17,7 @@ export const runPMD = async (repoPath, reportPath) => {
         `-f json -r "${reportPath}" ` +
         `--no-fail-on-error --no-cache`;
 
-    const result = await execWithTimeout(command, process.env.PMD_TIMEOUT_MS || 0);
+    const result = await execWithTimeout(command, process.env.PMD_TIMEOUT_MS || 120000);
     console.log("PMD analysis complete.");
 
     if (result.code !== 0 && result.code !== 4) {

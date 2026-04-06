@@ -49,7 +49,7 @@ export const cloneAndAnalyzeRepo = async (req, res) => {
 
     const gitCloneResult = await execWithTimeout(
       `git clone --depth 1 "${githubLink}" "${repoPath}"`,
-      process.env.CLONE_TIMEOUT_MS || 0)
+      process.env.CLONE_TIMEOUT_MS || 60000)
 
     if (gitCloneResult.code !== 0) {
         return res

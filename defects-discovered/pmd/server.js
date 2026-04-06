@@ -17,3 +17,5 @@ server.use("/api/pmd", pmdRoutes)
 
 server.listen(PORT, () => console.log(`Running on port ${PORT}`))
 
+export default server
+
