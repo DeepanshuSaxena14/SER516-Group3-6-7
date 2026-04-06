@@ -6,7 +6,7 @@ import pmdRoutes from "./routes/PmdRoutes.js"
 
 dotenv.config()
 
-const PORT = process.env.PORT || 8080 
+const PORT = process.env.PORT || 4000 
 const server = express()
 
 server.use(cors())
