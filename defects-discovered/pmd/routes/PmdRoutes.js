@@ -3,9 +3,6 @@ import { runPMDAnalysis, cloneAndAnalyzeRepo } from "../controllers/PmdControlle
 
 const router = Router()
 
-
-
-
 router.post("/run-pmd", runPMDAnalysis)
 router.get("/analyze", cloneAndAnalyzeRepo)
 
