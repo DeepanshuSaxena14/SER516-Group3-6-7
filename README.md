@@ -73,13 +73,17 @@ docker compose down -v
 - URL: `http://localhost:4000`
 
 #### PMD Endpoints:
-- **Run PMD analysis**
-  - `POST /api/github/clone`
-  - Body: `{ "github_link": "URL" }`
-  - **New**: Now returns `pmd` results AND a `defectCount` property.
+- **Run PMD analysis (Local)**
+  - `POST /api/pmd/run-pmd`
+  - Body: `{ "repoPath": "/app/work/project" }`
+  - Returns `report` results.
+
+- **Clone and Analyze (GitHub)**
+  - `GET /api/pmd/analyze?github_link=URL`
+  - Returns `report` results.
 
 #### Frontend
-- URL: `http://localhost:80`
+- URL: `http://localhost:8081`
 
 > [!NOTE]
 > This frontend's only purpose is to allow the user to enter a GitHub repo URL to analyze instead of typing it out as a command. It is not the main dashboard used for any actual UI or statistics. The results are only returned in the api response and not shown in this frontend. The metrics will be integrated with grafana in this sprint or the next.
@@ -120,12 +124,18 @@ docker compose up -d --build
 
 ### 2. Verify Endpoints with Curl
 
-#### A. Trigger PMD Analysis (PMD Service)
-Analyzes a Java project from GitHub and returns the bug count.
+#### A. Trigger PMD Analysis (GitHub Clone)
+Analyzes a Java project from GitHub and returns analysis.
 ```bash
-curl -X POST http://localhost:4000/api/github/clone \
+curl "http://localhost:4000/api/pmd/analyze?github_link=https://github.com/octocat/Hello-World"
+```
+
+#### B. Trigger PMD Analysis (Local Path)
+Analyzes a local project already present in the container.
+```bash
+curl -X POST http://localhost:4000/api/pmd/run-pmd \
   -H "Content-Type: application/json" \
-  -d '{"github_link": "https://github.com/octocat/Hello-World"}'
+  -d '{"repoPath": "."}'
 ```
 
 #### B. Get Bug Count Summary (Mongo Service)
