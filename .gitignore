@@ -75,6 +75,7 @@ defects-discovered/logs/
 defects-discovered/tmp/
 defects-discovered/temp/
 defects-discovered/pmd/out/
+node_modules/
 
 *.class
 
