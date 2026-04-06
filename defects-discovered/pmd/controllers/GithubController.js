@@ -1,4 +1,10 @@
+import fs from "fs";
+import path from "path";
 import shell from "shelljs";
+import { execWithTimeout } from "../utils/utils.js";
+import { runPMD } from "../pmdRunner.js";
+
+const CLONE_TIMEOUT_MS = parseInt(process.env.CLONE_TIMEOUT_MS) || 60000;
 
 export const cloneRepo = async (req, res) => {
 
@@ -49,5 +55,6 @@ export const cloneRepo = async (req, res) => {
     if (error.message.includes('timed out')) {
       return res.status(504).json({ message: error.message });
     }
-  };
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
 }
