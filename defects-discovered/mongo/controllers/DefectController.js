@@ -1,8 +1,8 @@
 import Defect from "../models/DefectModel.js";
 
 // returns defects and counts them
-export const aggregateDefects = (violations = []) => {
-  return violations.length;
+export const aggregateDefects = (violations) => {
+  return (violations || []).length;
 };
 
 // saves defect count
