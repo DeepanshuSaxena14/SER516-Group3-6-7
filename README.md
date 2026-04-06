@@ -73,13 +73,10 @@ docker compose down -v
 - URL: `http://localhost:4000`
 
 #### PMD Endpoints:
-  - #### Run pmd analysis
-    - post `/api/github/clone`
-
-take in a json body of this format:
-```JSON
-{ "github_link": "URL" }
-```
+- **Run PMD analysis**
+  - `POST /api/github/clone`
+  - Body: `{ "github_link": "URL" }`
+  - **New**: Now returns `pmd` results AND a `defectCount` property.
 
 #### Frontend
 - URL: `http://localhost:80`
@@ -92,25 +89,61 @@ take in a json body of this format:
 - URL: `http://localhost:4001`
   
 #### Mongo Endpoints
-  - #### Stats (Focus factor entry)
-    - Get all stats   
-      - get `/api/stat `
+- **Defects Summary (Bug Count)**
+  - `GET /api/defects/summary`
+  - Returns the latest identified bug count.
 
-    - Create stat
-      - post `/api/stat`
+- **Stats (Focus factor entry)**
+  - Get all stats: `GET /api/stat`
+  - Create stat: `POST /api/stat`
+  - Update stat: `PUT /api/stat/:id`
+  - Delete stat: `DELETE /api/stat/:id`
 
-    - Update stat
-      - put `/api/stat/:id`
-
-    - Delete stat
-      - delete `/api/stat/:id`
-
-example json body for focus factor create and update stat:
+Example JSON body for Focus Factor create/update:
 ```JSON
 {
   "workCapacity": 80,
   "velocity": 45
 }
+```
+
+# Quick Start & Testing
+
+Follow these steps to get the environment running and verify the services.
+
+### 1. Start the Environment
+Ensure Docker Desktop is running, then execute:
+```bash
+docker compose up -d --build
+```
+*Wait ~30 seconds for MongoDB and the services to initialize.*
+
+### 2. Verify Endpoints with Curl
+
+#### A. Trigger PMD Analysis (PMD Service)
+Analyzes a Java project from GitHub and returns the bug count.
+```bash
+curl -X POST http://localhost:4000/api/github/clone \
+  -H "Content-Type: application/json" \
+  -d '{"github_link": "https://github.com/octocat/Hello-World"}'
+```
+
+#### B. Get Bug Count Summary (Mongo Service)
+Retrieves the latest identified bug count stored in the database.
+```bash
+curl http://localhost:4001/api/defects/summary
+```
+
+#### C. Focus Factor Stats (Mongo Service)
+View existing focus factor capacity/velocity records.
+```bash
+curl http://localhost:4001/api/stat
+```
+
+#### D. Fan-Out Metrics (FanIn/Out Service)
+*Note: Replace `{Project Path}` with an absolute path to a Java project on your local machine.*
+```bash
+curl "http://localhost:8082/metrics/fanout?path=/input/Simple-Java-Calculator/src"
 ```
 
 ## Jenkins
