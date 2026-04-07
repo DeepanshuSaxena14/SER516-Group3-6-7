@@ -55,6 +55,10 @@ services:
       - "${G7_PMD_PORT:-4000}:4000"
     volumes:
       - g7-workdata:/app/work
+    environment:
+      - PORT=4000
+      - CLONE_TIMEOUT_MS=60000
+      - PMD_TIMEOUT_MS=120000
 
   g7-frontend:
     build: ./defects-discovered/frontend

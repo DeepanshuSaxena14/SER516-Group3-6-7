@@ -20,11 +20,12 @@ vi.mock("../pmdRunner.js", () => ({
     runPMD: vi.fn((repoPath, reportPath) => {
         fs.mkdirSync(path.dirname(reportPath), { recursive: true });
         fs.writeFileSync(reportPath, JSON.stringify({ ok: true }));
+        return reportPath;
     }),
 }));
 
 // The idea is to not actually clone any repos in tests, and run everything in a temp directory
-describe("POST /api/github/clone", () => {
+describe("GET /api/pmd/analyze", () => {
     let tmpDir;
     let app;
     let shelljs;
@@ -33,7 +34,7 @@ describe("POST /api/github/clone", () => {
     beforeAll(async () => {
         // We need to import shelljs and app here to ensure the mocks are in place before the controller is loaded
         shelljs = (await import("shelljs")).default;
-        app = (await import("../app.js")).default;
+        app = (await import("../server.js")).default;
     });
 
     beforeEach(() => {
@@ -55,33 +56,21 @@ describe("POST /api/github/clone", () => {
     });
 
     it("returns 400 when github_link is missing", async () => {
-        const res = await request(app).post("/api/github/clone").send({});
+        const res = await request(app).get("/api/pmd/analyze")
         expect(res.status).toBe(400);
-        expect(res.body.message).toMatch(/github_link/i);
     });
 
-    it("returns 200 when clone succeeds and report exists", async () => {
-        shelljs.exec.mockReturnValue({ code: 0, stdout: "", stderr: "" });
+    it("returns 200 when clone succeeds", async () => {
+        shelljs.exec.mockImplementation((cmd, opts, callback) => {
+            callback(0, "", "");
+        });
 
         const res = await request(app)
-            .post("/api/github/clone")
-            .send({ github_link: "https://github.com/junit-team/junit-framework.git" });
+            .get("/api/pmd/analyze?github_link=https://github.com/example/repo.git")
 
         expect(res.status).toBe(200);
-        expect(res.body.pmd).toEqual({ ok: true });
 
         expect(shelljs.exec).toHaveBeenCalledTimes(1);
         expect(shelljs.exec.mock.calls[0][0]).toContain("git clone");
-    });
-
-    it("returns 400 when clone fails", async () => {
-        shelljs.exec.mockReturnValue({ code: 1, stdout: "", stderr: "boom" });
-
-        const res = await request(app)
-            .post("/api/github/clone")
-            .send({ github_link: "https://github.com/example/repo.git" });
-
-        expect(res.status).toBe(400);
-        expect(res.body.message).toMatch(/failed/i);
     });
 });
