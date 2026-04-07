@@ -67,16 +67,24 @@ export const cloneAndAnalyzeRepo = async (req, res) => {
         const generatedReportPath = await runPMD(repoPath, reportPath);
         const reportContent = fs.readFileSync(generatedReportPath, "utf-8");
         const reportJson = JSON.parse(reportContent);
+
+        const defectCount = reportJson?.files?.reduce((total, file) => {
+          return total + (file?.violations?.length ?? 0)
+        }, 0)
+
         shell.rm("-rf", repoPath);
+
         return res.status(200).json({
             message: "Repository cloned and PMD analysis complete",
+            defectCount,
             repoPath,
             reportPath: generatedReportPath,
-            report: reportJson,
+            report: reportJson
         });
-            } catch (error) {
-            console.error("Clone and PMD analysis error:", error);
-        return res.status(500).json({
+
+      } catch (error) {
+          console.error("Clone and PMD analysis error:", error);
+          return res.status(500).json({
             message: "Failed to run PMD analysis after cloning repository",
             error: error.message,
             repoPath,
