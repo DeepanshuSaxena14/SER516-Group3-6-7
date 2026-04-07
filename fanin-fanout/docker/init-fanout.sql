@@ -1,6 +1,20 @@
+-- Main table to track each analysis run
+CREATE TABLE IF NOT EXISTS analysis_runs (
+    run_id         SERIAL PRIMARY KEY,
+    repo_url       TEXT NOT NULL,
+    branch         VARCHAR(255) DEFAULT 'main',
+    commit_hash    VARCHAR(40),
+    status         VARCHAR(20) NOT NULL DEFAULT 'running'
+                   CHECK (status IN ('running', 'completed', 'failed')),
+    error_message  TEXT,
+    started_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at   TIMESTAMP WITH TIME ZONE
+);
+
 -- Fan-out metrics table for Grafana (snapshot + time series)
 CREATE TABLE IF NOT EXISTS fan_out_metrics (
     id          SERIAL PRIMARY KEY,
+    run_id      INTEGER NOT NULL REFERENCES analysis_runs(run_id),
     recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     class_name  VARCHAR(1024) NOT NULL,
     scope       VARCHAR(64) NOT NULL DEFAULT 'class',
@@ -9,10 +23,12 @@ CREATE TABLE IF NOT EXISTS fan_out_metrics (
 
 CREATE INDEX IF NOT EXISTS idx_fan_out_recorded_at ON fan_out_metrics (recorded_at);
 CREATE INDEX IF NOT EXISTS idx_fan_out_class ON fan_out_metrics (class_name, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_fan_out_run_id ON fan_out_metrics (run_id);
 
 -- Fan-in metrics table for Grafana (snapshot + time series)
 CREATE TABLE IF NOT EXISTS fan_in_metrics (
     id          SERIAL PRIMARY KEY,
+    run_id      INTEGER NOT NULL REFERENCES analysis_runs(run_id),
     recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     class_name  VARCHAR(1024) NOT NULL,
     scope       VARCHAR(64) NOT NULL DEFAULT 'class',
@@ -21,3 +37,4 @@ CREATE TABLE IF NOT EXISTS fan_in_metrics (
 
 CREATE INDEX IF NOT EXISTS idx_fan_in_recorded_at ON fan_in_metrics (recorded_at);
 CREATE INDEX IF NOT EXISTS idx_fan_in_class ON fan_in_metrics (class_name, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_fan_in_run_id ON fan_in_metrics (run_id);
