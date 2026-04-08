@@ -24,6 +24,22 @@ export const saveDefectCount = async (req, res) => {
   }
 };
 
+export const getLatestDefectCount = async (req, res) => {
+  try {
+    const { repoName } = req.params;
+    const latest = await DefectCount.findOne({ repoName }).sort({ analyzedAt: -1 });
+    
+    if (!latest) {
+      return res.status(404).json({ message: `No defect count found for repo '${repoName}'` });
+    }
+    
+    res.status(200).json(latest);
+  } 
+  catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // pulls the latest defect count
 export const getLatestDefect = async (req, res) => {
   try {
