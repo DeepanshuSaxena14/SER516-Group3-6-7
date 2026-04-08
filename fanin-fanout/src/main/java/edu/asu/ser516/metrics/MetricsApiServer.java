@@ -55,6 +55,9 @@ public final class MetricsApiServer {
                     ));
 
             ctx.json(toFanOutJsonArray(sorted));
+            
+            // Persist to DB for Grafana
+            MetricDbWriter.writeFanOut(sorted);
 
         } catch (IOException e) {
             sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
@@ -98,6 +101,9 @@ public final class MetricsApiServer {
                             LinkedHashMap::new));
 
             ctx.json(toUnifiedFanInJson(classLevelFanIn, methodLevelFanIn));
+
+            // Persist to DB for Grafana
+            MetricDbWriter.writeFanIn(classLevelFanIn);
 
         } catch (IOException e) {
             sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
