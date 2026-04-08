@@ -40,29 +40,17 @@ export const getLatestDefectCount = async (req, res) => {
   }
 };
 
-// pulls the latest defect count
-export const getLatestDefect = async (req, res) => {
-  try {
-    const latest = await Defect.findOne().sort({ analyzedAt: -1 });
-    if (!latest) {
-      return res.status(404).json({ message: "No defect analysis found" });
-    }
-    res.status(200).json(latest);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 // creates a new defect
 export const createDefect = async (req, res) => {
   try {
-    const { rule, message } = req.body;
+    const { repoName, rule, message } = req.body;
 
-    if (!rule || !message) {
-      return res.status(400).json({ message: "rule and message are required" });
+    if (!repoName || !rule || !message) {
+      return res.status(400).json({ message: "repoName, rule, and message are required" });
     }
 
     const newDefect = new Defect({
+      repoName,
       rule,
       message
     });
