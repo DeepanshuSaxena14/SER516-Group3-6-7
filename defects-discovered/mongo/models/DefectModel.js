@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
 
 const DefectSchema = new mongoose.Schema({
-  totalCount: Number,
+  repoName: {
+    type: String,
+    required: true
+  },
+  isFixed: {
+    type: Boolean,
+    default: false
+  },
   rule: String,
   message: String,
   analyzedAt: {

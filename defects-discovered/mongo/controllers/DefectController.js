@@ -34,13 +34,14 @@ export const getLatestDefect = async (req, res) => {
 // creates a new defect
 export const createDefect = async (req, res) => {
   try {
-    const { rule, message } = req.body;
+    const { repoName, rule, message } = req.body;
 
-    if (!rule || !message) {
-      return res.status(400).json({ message: "rule and message are required" });
+    if (!repoName || !rule || !message) {
+      return res.status(400).json({ message: "repoName, rule, and message are required" });
     }
 
     const newDefect = new Defect({
+      repoName,
       rule,
       message
     });
