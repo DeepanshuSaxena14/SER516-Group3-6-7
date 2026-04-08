@@ -8,6 +8,7 @@ SER516-Group3-6-7/
 ├── afferent-efferent/         # Group 3
 ├── defects-discovered/        # Group 7
 ├── fanin-fanout/              # Group 6
+├── middleware/                # Group 3-6-7 shared middleware
 └── docker-compose.yml         # Root Docker Compose file
 └── Jenkinsfile                # Root Jenkins automations file
 ```
@@ -29,6 +30,14 @@ docker compose version
 ```bash
 docker compose up --build
 ```
+
+> [!NOTE]
+> The local `g6-grafana` container is disabled by default (migrated to hosted Grafana).
+> Use the hosted Grafana at https://swenv0linux.asu.edu/grafana/ for dashboards.
+> To start the local Grafana container for development, run:
+> ```bash
+> docker compose --profile local up --build
+> ```
 
 # Check running containers
 ```bash
@@ -64,10 +73,25 @@ docker compose down -v
 - Username: `grafana`
 - Password: `grafana`
 
-#### Grafana
+#### Grafana (Hosted)
+- URL: `https://swenv0linux.asu.edu/grafana/`
+- Username: your ASU Grafana account
+- Dashboards: Fan-Out Metrics Dashboard, Fan-In Metrics Dashboard
+
+> [!IMPORTANT]
+> The hosted Grafana connects to the PostgreSQL datasource via the machine running `docker compose up`.
+> The datasource is configured with a direct IP address on the ASU network.
+> **Before a demo session**, whoever runs `docker compose up` must:
+> 1. Find their ASU Ethernet IP: run `ipconfig` and look for the adapter with `asu.edu` DNS suffix
+> 2. Update the `grafana-postgresql-datasource` Host URL in hosted Grafana to `{YOUR_IP}:5433`
+> 3. Hit **Save & test** to confirm the green connection status
+> 4. Run the FIFO endpoints above to populate fresh data into the dashboards
+
+#### Grafana (Local — optional, for development only)
 - URL: `http://localhost:3000`
 - Username: `admin`
 - Password: `admin`
+- Start with: `docker compose --profile local up`
 
 #### PMD Backend
 - URL: `http://localhost:4000`
@@ -115,7 +139,7 @@ example json body for focus factor create and update stat:
 
 ## Jenkins
 - We have automation pipelines set to update grafana, run any available static analysis and unit tests whenever there is a push on any branches
-- To access Jenkins use this link: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
+- To access Jenkins use this link: https://swenv0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
 
 # More Info
 
