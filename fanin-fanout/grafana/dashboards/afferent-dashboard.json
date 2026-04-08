@@ -72,7 +72,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT MAX(afferent_coupling) AS \"Max Afferent Coupling\"\nFROM ae_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM ae_metrics);",
+                    "rawSql": "SELECT MAX(afferent) AS \"Max Afferent Coupling\"\nFROM afferent_efferent_result\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM afferent_efferent_result);",
                     "refId": "A"
                 }
             ]
@@ -141,7 +141,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT ROUND(AVG(afferent_coupling)::numeric, 1) AS \"Avg Afferent Coupling\"\nFROM ae_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM ae_metrics);",
+                    "rawSql": "SELECT ROUND(AVG(afferent)::numeric, 1) AS \"Avg Afferent Coupling\"\nFROM afferent_efferent_result\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM afferent_efferent_result);",
                     "refId": "A"
                 }
             ]
@@ -202,7 +202,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT COUNT(*) AS \"Classes\"\nFROM ae_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM ae_metrics);",
+                    "rawSql": "SELECT COUNT(*) AS \"Classes\"\nFROM afferent_efferent_result\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM afferent_efferent_result);",
                     "refId": "A"
                 }
             ]
@@ -263,7 +263,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM ae_metrics;",
+                    "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM afferent_efferent_result;",
                     "refId": "A"
                 }
             ]
@@ -345,7 +345,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT class_name AS \"Class\", afferent_coupling AS \"Afferent Coupling\"\nFROM ae_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM ae_metrics)\n  AND afferent_coupling >= ${min_afferent_coupling}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY afferent_coupling DESC;",
+                    "rawSql": "SELECT class_name AS \"Class\", afferent AS \"Afferent Coupling\"\nFROM afferent_efferent_result\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM afferent_efferent_result)\n  AND afferent >= ${min_afferent}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY afferent DESC;",
                     "refId": "A"
                 }
             ]
@@ -443,7 +443,7 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT class_name AS \"Class\", afferent_coupling AS \"Afferent Coupling\"\nFROM ae_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM ae_metrics)\n  AND afferent_coupling >= ${min_afferent_coupling}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY afferent_coupling DESC;",
+                    "rawSql": "SELECT class_name AS \"Class\", afferent AS \"Afferent Coupling\"\nFROM afferent_efferent_result\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM afferent_efferent_result)\n  AND afferent >= ${min_afferent}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY afferent DESC;",
                     "refId": "A"
                 }
             ]
@@ -515,7 +515,7 @@
                     "editorMode": "code",
                     "format": "time_series",
                     "rawQuery": true,
-                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, afferent_coupling\nFROM ae_metrics\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
+                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, afferent\nFROM afferent_efferent_result\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
                     "refId": "A"
                 }
             ]
@@ -538,7 +538,7 @@
                 "description": "Show only classes with afferent coupling >= this value. Set to 0 to show all.",
                 "hide": 0,
                 "label": "Min Afferent Coupling",
-                "name": "min_afferent_coupling",
+                "name": "min_afferent",
                 "options": [
                     {
                         "selected": true,

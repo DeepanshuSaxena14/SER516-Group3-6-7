@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_fan_in_class ON fan_in_metrics (class_name, recor
 CREATE INDEX IF NOT EXISTS idx_fan_in_run_id ON fan_in_metrics (run_id);
 
 -- Afferent/Efferent metrics table for Grafana (snapshot + time series)
-CREATE TABLE IF NOT EXISTS afferent_efferent_results (
+CREATE TABLE IF NOT EXISTS afferent_efferent_result (
     id          SERIAL PRIMARY KEY,
     run_id      INTEGER REFERENCES analysis_runs(run_id),
     recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS afferent_efferent_results (
     efferent    INTEGER NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_ae_recorded_at ON afferent_efferent_results (recorded_at);
-CREATE INDEX IF NOT EXISTS idx_ae_class ON afferent_efferent_results (class_name, recorded_at);
-CREATE INDEX IF NOT EXISTS idx_ae_run_id ON afferent_efferent_results (run_id);
+CREATE INDEX IF NOT EXISTS idx_ae_recorded_at ON afferent_efferent_result (recorded_at);
+CREATE INDEX IF NOT EXISTS idx_ae_class ON afferent_efferent_result (class_name, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_ae_run_id ON afferent_efferent_result (run_id);
 
 -- PMD Defects metrics
 CREATE TABLE IF NOT EXISTS pmd_metrics (
