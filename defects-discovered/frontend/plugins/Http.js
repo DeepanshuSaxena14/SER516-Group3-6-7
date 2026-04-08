@@ -7,4 +7,11 @@ const pmdHttp = axios.create({
   },
 });
 
-export default pmdHttp;
+const mongoHttp = axios.create({
+  baseURL: `${ENV.MONGO_BASE_URL}/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export { pmdHttp, mongoHttp };

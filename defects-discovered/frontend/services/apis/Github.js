@@ -1,4 +1,4 @@
-import pmdHttp from "../../plugins/Http.js";
+import { pmdHttp } from "../../plugins/Http.js";
 
 export const cloneRepo = async (URL) => {
   const path = "/github/clone"
