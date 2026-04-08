@@ -30,3 +30,25 @@ export const getLatestDefect = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// creates a new defect
+export const createDefect = async (req, res) => {
+  try {
+    const { rule, message } = req.body;
+
+    if (!rule || !message) {
+      return res.status(400).json({ message: "rule and message are required" });
+    }
+
+    const newDefect = new Defect({
+      rule,
+      message
+    });
+
+    const saved = await newDefect.save();
+    res.status(201).json({ message: "Defect created successfully", defect: saved });
+  } catch (error) {
+    console.error("Error creating defect:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
