@@ -70,7 +70,7 @@ services:
     ports:
       - "${G7_FRONTEND_PORT:-8081}:80"
     depends_on:
-      - g7-pmd
+      - middlewares
 
   g7-mongo:
     build:
@@ -79,7 +79,7 @@ services:
     ports:
       - "${G7_MONGO_PORT:-4001}:${G7_MONGO_PORT:-4001}"
     environment:
-      - PORT=4001
+      - PORT=${G7_MONGO_PORT:-4001}
       - MONGO_URI=mongodb+srv://sobinsalman_db_user:zhPODvOJyBjtondA@ser516.88mmzgx.mongodb.net/?appName=ser516
 
   g3-ae-metrics:
@@ -89,6 +89,16 @@ services:
     tty: true
     volumes:
       - g3-storage:/app/storage
+
+  middlewares:
+    build: ./middleware
+    ports:
+      - "${MIDDLEWARE_PORT:-4002}:4002"
+    environment:
+      - PORT=${MIDDLEWARE_PORT:-4002}
+      - SERVICE_ROUTES_JSON={"routes":[{"route":"mongo","api":"http://localhost:${G7_MONGO_PORT:-4001}"}]}
+
+
 
 volumes:
   g7-workdata:
