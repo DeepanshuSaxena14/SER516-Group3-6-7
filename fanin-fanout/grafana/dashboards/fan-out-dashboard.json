@@ -1,8 +1,21 @@
 {
     "annotations": {
-        "list": []
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
     },
-    "description": "Visualizes class-level fan-out metrics for Sprint Review. Fan-out measures how many other classes each class depends on \u2014 high values may indicate tight coupling.",
+    "description": "Visualizes class-level fan-out metrics for Sprint Review. Fan-out measures how many other classes each class depends on — high values may indicate tight coupling.",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 1,
@@ -10,31 +23,23 @@
     "links": [],
     "panels": [
         {
-            "id": 10,
-            "title": "Highest Fan-Out",
-            "description": "Maximum fan-out value across all classes in the latest run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 0,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Maximum fan-out value across all classes in the latest run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "thresholds"
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -49,7 +54,19 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "id": 10,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -57,12 +74,11 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -75,35 +91,29 @@
                     "rawSql": "SELECT MAX(fan_out) AS \"Max Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics);",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Highest Fan-Out",
+            "type": "stat"
         },
         {
-            "id": 11,
-            "title": "Average Fan-Out",
-            "description": "Average fan-out value across all classes in the latest run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 6,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Average fan-out value across all classes in the latest run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "thresholds"
                     },
                     "decimals": 1,
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -118,7 +128,19 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "id": 11,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -126,12 +148,11 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -144,42 +165,48 @@
                     "rawSql": "SELECT ROUND(AVG(fan_out)::numeric, 1) AS \"Avg Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics);",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Average Fan-Out",
+            "type": "stat"
         },
         {
-            "id": 12,
-            "title": "Total Classes Analyzed",
-            "description": "Number of classes analyzed in the latest run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 12,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Number of classes analyzed in the latest run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "blue"
+                        "fixedColor": "blue",
+                        "mode": "fixed"
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "blue",
-                                "value": null
+                                "value": 0
                             }
                         ]
                     }
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 0
+            },
+            "id": 12,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -187,12 +214,11 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -205,55 +231,60 @@
                     "rawSql": "SELECT COUNT(*) AS \"Classes\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics);",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Total Classes Analyzed",
+            "type": "stat"
         },
         {
-            "id": 13,
-            "title": "Last Analysis Run",
-            "description": "Timestamp of the most recent fan-out analysis run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 18,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Timestamp of the most recent fan-out analysis run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "purple"
+                        "fixedColor": "purple",
+                        "mode": "fixed"
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "purple",
-                                "value": null
+                                "value": 0
                             }
                         ]
                     }
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 0
+            },
+            "id": 13,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
                     ],
-                    "fields": "",
+                    "fields": "/.*/",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -264,25 +295,35 @@
                     "format": "table",
                     "rawQuery": true,
                     "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM fan_out_metrics;",
-                    "refId": "A"
+                    "refId": "A",
+                    "sql": {
+                        "columns": [
+                            {
+                                "parameters": [],
+                                "type": "function"
+                            }
+                        ],
+                        "groupBy": [
+                            {
+                                "property": {
+                                    "type": "string"
+                                },
+                                "type": "groupBy"
+                            }
+                        ],
+                        "limit": 50
+                    }
                 }
-            ]
+            ],
+            "title": "Last Analysis Run",
+            "type": "stat"
         },
         {
-            "id": 1,
-            "title": "Fan-Out per Class (Bar Chart)",
-            "description": "Displays fan-out values for each class from the latest analysis run. Classes are sorted by fan-out descending.",
-            "type": "barchart",
-            "gridPos": {
-                "h": 12,
-                "w": 24,
-                "x": 0,
-                "y": 4
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Displays fan-out values for each class from the latest analysis run. Classes are sorted by fan-out descending.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -291,21 +332,31 @@
                     "custom": {
                         "axisBorderShow": false,
                         "axisCenteredZero": false,
+                        "axisColorMode": "text",
                         "axisLabel": "Fan-Out Count",
                         "axisPlacement": "auto",
                         "fillOpacity": 80,
                         "gradientMode": "scheme",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
                         "lineWidth": 1,
                         "scaleDistribution": {
                             "type": "linear"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
                         }
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -320,22 +371,36 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 12,
+                "w": 24,
+                "x": 0,
+                "y": 4
+            },
+            "id": 1,
             "options": {
+                "barRadius": 0,
                 "barWidth": 0.7,
+                "fullHighlight": false,
                 "groupWidth": 0.7,
                 "legend": {
+                    "calcs": [],
                     "displayMode": "list",
-                    "placement": "bottom"
+                    "placement": "bottom",
+                    "showLegend": true
                 },
                 "orientation": "horizontal",
                 "showValue": "always",
                 "stacking": "none",
                 "tooltip": {
+                    "hideZeros": false,
                     "mode": "single",
                     "sort": "none"
                 },
-                "xTickLabelRotation": 0
+                "xTickLabelRotation": 0,
+                "xTickLabelSpacing": 0
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -345,26 +410,36 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT class_name AS \"Class\", fan_out AS \"Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics)\n  AND fan_out >= ${min_fanout}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_out DESC;",
-                    "refId": "A"
+                    "rawSql": "SELECT class_name AS \"Class\", fan_out AS \"Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics)\nORDER BY fan_out DESC;",
+                    "refId": "A",
+                    "sql": {
+                        "columns": [
+                            {
+                                "parameters": [],
+                                "type": "function"
+                            }
+                        ],
+                        "groupBy": [
+                            {
+                                "property": {
+                                    "type": "string"
+                                },
+                                "type": "groupBy"
+                            }
+                        ],
+                        "limit": 50
+                    }
                 }
-            ]
+            ],
+            "title": "Fan-Out per Class (Bar Chart)",
+            "type": "barchart"
         },
         {
-            "id": 2,
-            "title": "Fan-Out Metrics Table",
-            "description": "Table view of fan-out values per class from the latest run. Sorted by fan-out descending.",
-            "type": "table",
-            "gridPos": {
-                "h": 10,
-                "w": 12,
-                "x": 0,
-                "y": 16
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Table view of fan-out values per class from the latest run. Sorted by fan-out descending.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -375,14 +450,18 @@
                         "cellOptions": {
                             "type": "auto"
                         },
+                        "footer": {
+                            "reducers": []
+                        },
                         "inspect": false
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -421,12 +500,16 @@
                     }
                 ]
             },
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 0,
+                "y": 16
+            },
+            "id": 2,
             "options": {
-                "showHeader": true,
                 "cellHeight": "sm",
-                "footer": {
-                    "show": false
-                },
+                "showHeader": true,
                 "sortBy": [
                     {
                         "desc": true,
@@ -434,6 +517,7 @@
                     }
                 ]
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -446,46 +530,62 @@
                     "rawSql": "SELECT class_name AS \"Class\", fan_out AS \"Fan-Out\"\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics)\n  AND fan_out >= ${min_fanout}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_out DESC;",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Fan-Out Metrics Table",
+            "type": "table"
         },
         {
-            "id": 3,
-            "title": "Fan-Out Trend Over Time",
-            "description": "Shows how fan-out values change across analysis runs. Each line represents a class.",
-            "type": "timeseries",
-            "gridPos": {
-                "h": 10,
-                "w": 12,
-                "x": 12,
-                "y": 16
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Shows how fan-out values change across analysis runs. Each line represents a class.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "palette-classic"
                     },
                     "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
                         "axisLabel": "Fan-Out",
                         "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
                         "drawStyle": "line",
                         "fillOpacity": 10,
                         "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
                         "lineInterpolation": "linear",
                         "lineWidth": 2,
                         "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
                         "showPoints": "auto",
-                        "spanNulls": false
+                        "showValues": false,
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "red",
@@ -496,16 +596,27 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 12,
+                "y": 16
+            },
+            "id": 3,
             "options": {
                 "legend": {
+                    "calcs": [],
                     "displayMode": "list",
-                    "placement": "bottom"
+                    "placement": "bottom",
+                    "showLegend": true
                 },
                 "tooltip": {
+                    "hideZeros": false,
                     "mode": "multi",
                     "sort": "desc"
                 }
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -515,13 +626,34 @@
                     "editorMode": "code",
                     "format": "time_series",
                     "rawQuery": true,
-                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_out\nFROM fan_out_metrics\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
-                    "refId": "A"
+                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_out\nFROM fan_out_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_out_metrics)\nORDER BY recorded_at;",
+                    "refId": "A",
+                    "sql": {
+                        "columns": [
+                            {
+                                "parameters": [],
+                                "type": "function"
+                            }
+                        ],
+                        "groupBy": [
+                            {
+                                "property": {
+                                    "type": "string"
+                                },
+                                "type": "groupBy"
+                            }
+                        ],
+                        "limit": 50
+                    }
                 }
-            ]
+            ],
+            "title": "Fan-Out Trend Over Time",
+            "type": "timeseries"
         }
     ],
-    "schemaVersion": 39,
+    "preload": false,
+    "refresh": "",
+    "schemaVersion": 42,
     "tags": [
         "fan-out",
         "metrics",
@@ -531,12 +663,10 @@
         "list": [
             {
                 "current": {
-                    "selected": false,
                     "text": "0",
                     "value": "0"
                 },
                 "description": "Show only classes with fan-out >= this value. Set to 0 to show all.",
-                "hide": 0,
                 "label": "Min Fan-Out",
                 "name": "min_fanout",
                 "options": [
@@ -571,12 +701,10 @@
             },
             {
                 "current": {
-                    "selected": false,
                     "text": "",
                     "value": ""
                 },
                 "description": "Filter classes by name (partial match). Leave empty to show all.",
-                "hide": 0,
                 "label": "Class Filter",
                 "name": "class_filter",
                 "options": [
@@ -599,5 +727,5 @@
     "timezone": "browser",
     "title": "Fan-Out Metrics Dashboard",
     "uid": "fan-out-metrics",
-    "version": 3
+    "version": 8
 }
