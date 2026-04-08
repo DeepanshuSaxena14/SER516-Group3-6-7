@@ -1,20 +1,26 @@
 import Defect from "../models/DefectModel.js";
+import DefectCount from "../models/DefectCountModel.js";
 
 // returns defects and counts them
 export const aggregateDefects = (violations) => {
   return (violations || []).length;
 };
 
-// saves defect count
-export const saveDefects = async (totalCount) => {
+export const saveDefectCount = async (req, res) => {
   try {
-    const defect = new Defect({ totalCount });
-    const saved = await defect.save();
-    console.log(`Saved defect record: ${saved.totalCount} bugs`);
-    return saved;
-  } catch (error) {
-    console.error("Error saving defects:", error);
-    throw error;
+    const { repoName, totalCount } = req.body;
+
+    if (!repoName || !totalCount) {
+      return res.status(400).json({ message: "repoName and totalCount are required" });
+    }
+
+    const defectCount = new DefectCount({ repoName, totalCount });
+    const saved = await defectCount.save();
+    res.status(201).json({ message: "Defect count saved successfully", defectCount: saved });
+  } 
+  catch (error) {
+    console.error("Error saving defect count:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
