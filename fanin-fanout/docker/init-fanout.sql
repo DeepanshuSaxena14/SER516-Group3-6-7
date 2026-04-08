@@ -38,3 +38,17 @@ CREATE TABLE IF NOT EXISTS fan_in_metrics (
 CREATE INDEX IF NOT EXISTS idx_fan_in_recorded_at ON fan_in_metrics (recorded_at);
 CREATE INDEX IF NOT EXISTS idx_fan_in_class ON fan_in_metrics (class_name, recorded_at);
 CREATE INDEX IF NOT EXISTS idx_fan_in_run_id ON fan_in_metrics (run_id);
+
+-- Afferent/Efferent metrics table for Grafana (snapshot + time series)
+CREATE TABLE IF NOT EXISTS afferent_efferent_results (
+    id          SERIAL PRIMARY KEY,
+    run_id      INTEGER NOT NULL REFERENCES analysis_runs(run_id),
+    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    class_name  VARCHAR(1024) NOT NULL,
+    afferent    INTEGER NOT NULL,
+    efferent    INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ae_recorded_at ON afferent_efferent_results (recorded_at);
+CREATE INDEX IF NOT EXISTS idx_ae_class ON afferent_efferent_results (class_name, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_ae_run_id ON afferent_efferent_results (run_id);
