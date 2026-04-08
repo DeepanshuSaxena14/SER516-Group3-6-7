@@ -5,7 +5,7 @@ datasources:
     uid: postgres-metrics
     type: postgres
     access: proxy
-    url: postgres-metrics:5432
+    url: g6-postgres:5432
     database: metrics
     user: grafana
     secureJsonData:
