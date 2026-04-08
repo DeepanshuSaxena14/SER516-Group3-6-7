@@ -1,21 +1,55 @@
-import express from "express";
 import cors from "cors";
-import mongoRoutes from "./routes/mongoRoutes.js";
+import express from "express";
+import { fileURLToPath } from "node:url";
+import { createServiceProxy } from "./src/createServiceProxy.js";
+import { loadServiceConfig } from "./src/loadServiceConfig.js";
 
-const PORT = 4002;
-const app = express();
+const PORT = Number(process.env.PORT) || 4002;
 
-app.use(cors());
-app.use(express.json());
+export const createApp = () => {
+  const app = express();
+  const serviceConfig = loadServiceConfig();
 
-// Middleware routes
-app.use("/mongo", mongoRoutes);
+  app.use(cors());
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get("/", (req, res) => {
-  res.send("Middleware server running");
-});
+  for (const service of serviceConfig.routes) {
+    app.use(service.route, createServiceProxy(service));
+  }
 
-app.listen(PORT, () => {
-  console.log(`Middleware running on port ${PORT}`);
-});
+  app.get("/", (req, res) => {
+    res.json({
+      message: "Middleware server running",
+      port: PORT,
+      routes: serviceConfig.routes.map(({ route, api }) => ({ route, api })),
+    });
+  });
+
+  app.get("/health", (req, res) => {
+    res.json({
+      status: "ok",
+      routes: serviceConfig.routes.map(({ route }) => route),
+    });
+  });
+
+  app.use((req, res) => {
+    res.status(404).json({
+      error: `No middleware service is configured for ${req.path}`,
+    });
+  });
+
+  return app;
+};
+
+export const startServer = () => {
+  const app = createApp();
+
+  return app.listen(PORT, () => {
+    console.log(`Middleware running on port ${PORT}`);
+  });
+};
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startServer();
+}
