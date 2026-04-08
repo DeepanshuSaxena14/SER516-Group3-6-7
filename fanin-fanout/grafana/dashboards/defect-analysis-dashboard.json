@@ -1,0 +1,602 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "description": "Visualizes code defects found by PMD analysis.",
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "panels": [
+        {
+            "id": 10,
+            "title": "Total Defects",
+            "description": "Total number of code violations found in the latest analysis run.",
+            "type": "stat",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 5
+                            },
+                            {
+                                "color": "red",
+                                "value": 10
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT COUNT(*) AS \"Total Defects\"\nFROM pmd_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM pmd_metrics);",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "title": "Critical",
+            "description": "Number of high-priority (P1/P2) violations in the latest run.",
+            "type": "stat",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 1,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 3
+                            },
+                            {
+                                "color": "red",
+                                "value": 7
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT COUNT(*) AS \"Critical Defects\"\nFROM pmd_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM pmd_metrics)\n  AND priority <= 2;",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "title": "Total Files Analyzed",
+            "description": "Count of unique files containing at least one violation.",
+            "type": "stat",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 0
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "blue"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "blue",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT COUNT(DISTINCT file_name) AS \"Files\"\nFROM pmd_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM pmd_metrics);",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 13,
+            "title": "Last Analysis Run",
+            "description": "Timestamp of the most recent PMD analysis run.",
+            "type": "stat",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 0
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "purple"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "purple",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM pmd_metrics;",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 1,
+            "title": "Defects per File (Bar Chart)",
+            "description": "Displays violation counts for each file from the latest analysis run. Files are sorted by violation count descending.",
+            "type": "barchart",
+            "gridPos": {
+                "h": 12,
+                "w": 24,
+                "x": 0,
+                "y": 4
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisLabel": "Defect Count",
+                        "axisPlacement": "auto",
+                        "fillOpacity": 80,
+                        "gradientMode": "scheme",
+                        "lineWidth": 1,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 5
+                            },
+                            {
+                                "color": "red",
+                                "value": 10
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "barWidth": 0.7,
+                "groupWidth": 0.7,
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "orientation": "horizontal",
+                "showValue": "always",
+                "stacking": "none",
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                },
+                "xTickLabelRotation": 0
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT file_name AS \"File\", COUNT(*) AS \"Defects\"\nFROM pmd_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM pmd_metrics)\n  AND priority <= ${min_priority}\n  AND file_name LIKE '%${file_filter}%'\nGROUP BY file_name\nORDER BY \"Defects\" DESC;",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "title": "Defects Metrics Table",
+            "description": "Detailed list of violations from the latest run.",
+            "type": "table",
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 0,
+                "y": 16
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "custom": {
+                        "align": "auto",
+                        "cellOptions": {
+                            "type": "auto"
+                        },
+                        "inspect": false
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 5
+                            },
+                            {
+                                "color": "red",
+                                "value": 10
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Defects"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.cellOptions",
+                                "value": {
+                                    "mode": "gradient",
+                                    "type": "gauge"
+                                }
+                            },
+                            {
+                                "id": "min",
+                                "value": 0
+                            },
+                            {
+                                "id": "max",
+                                "value": 20
+                            }
+                        ]
+                    }
+                ]
+            },
+            "options": {
+                "showHeader": true,
+                "cellHeight": "sm",
+                "footer": {
+                    "show": false
+                },
+                "sortBy": [
+                    {
+                        "desc": true,
+                        "displayName": "Defects"
+                    }
+                ]
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT file_name AS \"File\", rule AS \"Rule\", priority AS \"Priority\"\nFROM pmd_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM pmd_metrics)\n  AND priority <= ${min_priority}\n  AND file_name LIKE '%${file_filter}%'\nORDER BY priority ASC, file_name ASC;",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "title": "Defects Trend Over Time",
+            "description": "Shows how total defect count changes across analysis runs.",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 12,
+                "y": 16
+            },
+            "datasource": {
+                "type": "postgres",
+                "uid": "postgres-metrics"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisLabel": "Defects",
+                        "axisPlacement": "auto",
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "lineInterpolation": "linear",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "showPoints": "auto",
+                        "spanNulls": false
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 10
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "time_series",
+                    "rawQuery": true,
+                    "rawSql": "SELECT recorded_at AS \"time\", COUNT(*) AS value\nFROM pmd_metrics\nWHERE $__timeFilter(recorded_at)\nGROUP BY recorded_at\nORDER BY recorded_at;",
+                    "refId": "A"
+                }
+            ]
+        }
+    ],
+    "schemaVersion": 39,
+    "tags": [
+        "pmd",
+        "defects",
+        "sprint-review"
+    ],
+    "templating": {
+        "list": [
+            {
+                "current": {
+                    "text": "5",
+                    "value": "5"
+                },
+                "description": "Show only violations with priority <= this value.",
+                "hide": 0,
+                "label": "Priority Filter (1 is highest)",
+                "name": "min_priority",
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "0",
+                        "value": "0"
+                    },
+                    {
+                        "selected": false,
+                        "text": "1",
+                        "value": "1"
+                    },
+                    {
+                        "selected": false,
+                        "text": "3",
+                        "value": "3"
+                    },
+                    {
+                        "selected": false,
+                        "text": "5",
+                        "value": "5"
+                    },
+                    {
+                        "selected": false,
+                        "text": "10",
+                        "value": "10"
+                    }
+                ],
+                "query": "1,2,3,4,5",
+                "type": "custom"
+            },
+            {
+                "current": {
+                    "selected": false,
+                    "text": "",
+                    "value": ""
+                },
+                "description": "Filter classes by name (partial match). Leave empty to show all.",
+                "hide": 0,
+                "label": "File Name Filter",
+                "name": "file_filter",
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "",
+                        "value": ""
+                    }
+                ],
+                "query": "",
+                "type": "textbox"
+            }
+        ]
+    },
+    "time": {
+        "from": "now-7d",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "Defect Analysis Dashboard",
+    "uid": "defect-analysis-dashboard",
+    "version": 3
+}
