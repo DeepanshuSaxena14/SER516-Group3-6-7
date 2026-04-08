@@ -14,14 +14,15 @@ import java.util.stream.Collectors;
 
 public final class MetricsApiServer {
 
-    private MetricsApiServer() {}
+    private MetricsApiServer() {
+    }
 
     public static Javalin create() {
         return Javalin.create(config -> {
-                    config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
-                })
+            config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
+        })
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
-                .get("/metrics/fanin",  MetricsApiServer::handleFanIn)
+                .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods);
     }
 
@@ -52,8 +53,7 @@ public final class MetricsApiServer {
                             Map.Entry::getKey,
                             Map.Entry::getValue,
                             (e1, e2) -> e1,
-                            LinkedHashMap::new
-                    ));
+                            LinkedHashMap::new));
 
             MetricDbWriter.writeFanOut(sorted);
 
@@ -73,33 +73,61 @@ public final class MetricsApiServer {
             return;
         }
 
+        Scope scope;
+        try {
+            scope = validateScope(ctx);
+        } catch (IllegalArgumentException e) {
+            sendError(ctx, e.getMessage());
+            return;
+        }
+
         try {
             List<Path> javaFiles = SourceScanner.findJavaFiles(root);
 
-            // Class-level Fan-In via CouplingAnalyzer
-            CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
-            classAnalyzer.analyze();
-            Map<String, Integer> classLevelFanIn = classAnalyzer.getFanIn()
-                    .entrySet().stream()
-                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (e1, e2) -> e1,
-                            LinkedHashMap::new));
-
-            MetricDbWriter.writeFanIn(classLevelFanIn);
-
-            Map<String, Integer> methodLevelFanIn = FunctionFanInComputer.compute(javaFiles)
-                    .entrySet().stream()
-                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (e1, e2) -> e1,
-                            LinkedHashMap::new));
-
-            ctx.json(toUnifiedFanInJson(classLevelFanIn, methodLevelFanIn));
+            switch (scope) {
+                case CLASS -> {
+                    CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
+                    classAnalyzer.analyze();
+                    Map<String, Integer> classLevel = classAnalyzer.getFanIn()
+                            .entrySet().stream()
+                            .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                            .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    Map.Entry::getValue,
+                                    (e1, e2) -> e1,
+                                    LinkedHashMap::new));
+                    MetricDbWriter.writeFanIn(classLevel);
+                    ctx.json(toFanInJsonArray(classLevel, "class"));
+                }
+                case PACKAGE -> {
+                    CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
+                    classAnalyzer.analyze();
+                    Map<String, Integer> packageLevel = classAnalyzer.getFanIn()
+                            .entrySet().stream()
+                            .collect(Collectors.groupingBy(
+                                    e -> {
+                                        String fqn = e.getKey();
+                                        int dot = fqn.lastIndexOf('.');
+                                        return dot >= 0 ? fqn.substring(0, dot) : "(default)";
+                                    },
+                                    Collectors.summingInt(Map.Entry::getValue)))
+                            .entrySet().stream()
+                            .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                            .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    Map.Entry::getValue,
+                                    (e1, e2) -> e1,
+                                    LinkedHashMap::new));
+                    ctx.json(toFanInJsonArray(packageLevel, "package"));
+                }
+                case PROJECT -> {
+                    CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
+                    classAnalyzer.analyze();
+                    int total = classAnalyzer.getFanIn().values().stream()
+                            .mapToInt(Integer::intValue).sum();
+                    ctx.json("{\"scope\":\"project\",\"totalFanIn\":" + total + "}");
+                }
+            }
 
         } catch (IOException e) {
             sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
@@ -142,8 +170,7 @@ public final class MetricsApiServer {
             ctx.status(400);
             throw new IllegalArgumentException(
                     "Required query parameter 'path' is missing or empty. " +
-                            "Usage: /metrics/fanout?path=/absolute/path/to/java/project"
-            );
+                            "Usage: /metrics/fanout?path=/absolute/path/to/java/project");
         }
 
         Path root = Path.of(pathParam);
@@ -167,6 +194,29 @@ public final class MetricsApiServer {
         ctx.result("{\"error\":\"" + jsonEscape(message) + "\"}");
     }
 
+    private static void sendError(Context ctx, String message) {
+        ctx.status(400);
+        ctx.contentType("application/json");
+        ctx.result("{\"error\":\"" + jsonEscape(message) + "\"}");
+    }
+
+    // ← PASTE HERE
+    private static Scope validateScope(Context ctx) {
+        String scopeParam = ctx.queryParam("scope");
+
+        if (scopeParam == null || scopeParam.isBlank()) {
+            return Scope.CLASS; // default
+        }
+
+        try {
+            return Scope.valueOf(scopeParam.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            ctx.status(400);
+            throw new IllegalArgumentException(
+                    "Invalid scope '" + scopeParam + "'. Valid values are: class, package, project.");
+        }
+    }
+
     private static String toFanOutJsonArray(Map<String, Integer> fanOut) {
         StringBuilder sb = new StringBuilder("[\n");
         int i = 0, n = fanOut.size();
@@ -176,7 +226,26 @@ public final class MetricsApiServer {
                     .append("\",\"fanOut\":")
                     .append(e.getValue())
                     .append("}");
-            if (++i < n) sb.append(",");
+            if (++i < n)
+                sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String toFanInJsonArray(Map<String, Integer> data, String entityKey) {
+        StringBuilder sb = new StringBuilder("[\n");
+        int i = 0;
+        int n = data.size();
+        for (Map.Entry<String, Integer> e : data.entrySet()) {
+            sb.append("  {\"").append(entityKey).append("\":\"")
+                    .append(jsonEscape(e.getKey()))
+                    .append("\",\"fanIn\":")
+                    .append(e.getValue())
+                    .append("}");
+            if (++i < n)
+                sb.append(",");
             sb.append("\n");
         }
         sb.append("]");
@@ -200,7 +269,7 @@ public final class MetricsApiServer {
     }
 
     private static String toUnifiedFanInJson(Map<String, Integer> classLevel,
-                                             Map<String, Integer> methodLevel) {
+            Map<String, Integer> methodLevel) {
         StringBuilder sb = new StringBuilder("{\n");
 
         // classLevel array
@@ -212,21 +281,24 @@ public final class MetricsApiServer {
                     .append("\",\"fanIn\":")
                     .append(e.getValue())
                     .append("}");
-            if (++i < n) sb.append(",");
+            if (++i < n)
+                sb.append(",");
             sb.append("\n");
         }
         sb.append("  ],\n");
 
         // methodLevel array
         sb.append("  \"methodLevel\": [\n");
-        i = 0; n = methodLevel.size();
+        i = 0;
+        n = methodLevel.size();
         for (Map.Entry<String, Integer> e : methodLevel.entrySet()) {
             sb.append("    {\"method\":\"")
                     .append(jsonEscape(e.getKey()))
                     .append("\",\"fanIn\":")
                     .append(e.getValue())
                     .append("}");
-            if (++i < n) sb.append(",");
+            if (++i < n)
+                sb.append(",");
             sb.append("\n");
         }
         sb.append("  ]\n}");
@@ -235,7 +307,8 @@ public final class MetricsApiServer {
     }
 
     private static String jsonEscape(String s) {
-        if (s == null) return "";
+        if (s == null)
+            return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
