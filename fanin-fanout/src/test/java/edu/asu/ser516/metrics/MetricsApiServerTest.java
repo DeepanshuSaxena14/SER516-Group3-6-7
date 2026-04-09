@@ -64,6 +64,40 @@ class MetricsApiServerTest {
                         "Each entry must have a 'fanOut' key");
             });
         }
+
+        @Test
+        @DisplayName("scope=package returns package-level fanOut entries")
+        void scopePackageReturnsPackageEntries() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                var response = client.get("/metrics/fanout?path=" + ProjectPath + "&scope=package");
+                assertEquals(200, response.code());
+                assertNotNull(response.body());
+                String body = response.body().string();
+                assertTrue(body.contains("\"package\""),
+                        "Package scope entries must contain 'package' key");
+                assertTrue(body.contains("\"fanOut\""),
+                        "Package scope entries must contain 'fanOut' key");
+                assertFalse(body.contains("\"class\""),
+                        "Package scope should not expose 'class' key");
+            });
+        }
+
+        @Test
+        @DisplayName("scope=project returns project-level fanOut entries")
+        void scopeProjectReturnsProjectEntries() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                var response = client.get("/metrics/fanout?path=" + ProjectPath + "&scope=project");
+                assertEquals(200, response.code());
+                assertNotNull(response.body());
+                String body = response.body().string();
+                assertTrue(body.contains("\"project\""),
+                        "Project scope entries must contain 'project' key");
+                assertTrue(body.contains("\"fanOut\""),
+                        "Project scope entries must contain 'fanOut' key");
+                assertFalse(body.contains("\"class\""),
+                        "Project scope should not expose 'class' key");
+            });
+        }
     }
 
     @Nested
@@ -106,6 +140,19 @@ class MetricsApiServerTest {
             JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
                 var response = client.get("/metrics/fanout?path=");
                 assertEquals(400, response.code());
+            });
+        }
+
+        @Test
+        @DisplayName("Returns HTTP 400 when 'scope' has an unsupported value")
+        void returns400WhenScopeIsInvalid() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                var response = client.get("/metrics/fanout?path=" + ProjectPath + "&scope=invalid");
+                assertEquals(400, response.code());
+                assertNotNull(response.body());
+                String body = response.body().string();
+                assertTrue(body.contains("\"error\""),
+                        "Invalid scope response must contain an 'error' field");
             });
         }
     }
