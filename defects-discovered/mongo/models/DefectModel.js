@@ -9,6 +9,7 @@ const DefectSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  filepath: String,
   rule: String,
   message: String,
   analyzedAt: {

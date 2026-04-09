@@ -59,6 +59,7 @@ services:
       - PORT=4000
       - CLONE_TIMEOUT_MS=60000
       - PMD_TIMEOUT_MS=120000
+      - MONGO_API_URL=http://g7-mongo:4001/api
 
   g7-frontend:
     build: ./defects-discovered/frontend

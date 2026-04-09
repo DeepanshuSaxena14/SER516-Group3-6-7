@@ -57,17 +57,38 @@ export const getLatestDefectDetails = async (req, res) => {
   }
 };
 
+export const markDefectsFixed = async (req, res) => {
+  try {
+    const { defectIds } = req.body;
+
+    if (!defectIds || !Array.isArray(defectIds) || defectIds.length === 0) {
+      return res.status(400).json({ message: "defectIds array is required" });
+    }
+
+    const result = await Defect.updateMany(
+      { _id: { $in: defectIds } },
+      { $set: { isFixed: true } }
+    );
+
+    res.status(200).json({ message: "Defects marked as fixed", modifiedCount: result.modifiedCount });
+  } catch (error) {
+    console.error("Error marking defects as fixed:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // creates a new defect
 export const createDefect = async (req, res) => {
   try {
-    const { repoName, rule, message } = req.body;
+    const { repoName, filepath, rule, message } = req.body;
 
-    if (!repoName || !rule || !message) {
-      return res.status(400).json({ message: "repoName, rule, and message are required" });
+    if (!repoName || !filepath || !rule || !message) {
+      return res.status(400).json({ message: "repoName, filepath, rule, and message are required" });
     }
 
     const newDefect = new Defect({
       repoName,
+      filepath,
       rule,
       message
     });
