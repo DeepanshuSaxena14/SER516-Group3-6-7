@@ -194,13 +194,6 @@ public final class MetricsApiServer {
         ctx.result("{\"error\":\"" + jsonEscape(message) + "\"}");
     }
 
-    private static void sendError(Context ctx, String message) {
-        ctx.status(400);
-        ctx.contentType("application/json");
-        ctx.result("{\"error\":\"" + jsonEscape(message) + "\"}");
-    }
-
-    // ← PASTE HERE
     private static Scope validateScope(Context ctx) {
         String scopeParam = ctx.queryParam("scope");
 
