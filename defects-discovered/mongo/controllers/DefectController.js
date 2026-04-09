@@ -40,17 +40,17 @@ export const getLatestDefectCount = async (req, res) => {
   }
 };
 
-// gets latest defect details for a repo
+// gets all unfixed defects for a repo
 export const getLatestDefectDetails = async (req, res) => {
   try {
     const { repoName } = req.params;
-    const latest = await Defect.findOne({ repoName }).sort({ analyzedAt: -1 });
+    const defects = await Defect.find({ repoName, isFixed: false }).sort({ analyzedAt: -1 });
     
-    if (!latest) {
-      return res.status(404).json({ message: `No defects found for repo '${repoName}'` });
+    if (defects.length === 0) {
+      return res.status(404).json({ message: `No unfixed defects found for repo '${repoName}'` });
     }
     
-    res.status(200).json(latest);
+    res.status(200).json(defects);
   } 
   catch (error) {
     res.status(500).json({ error: error.message });
