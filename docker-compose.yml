@@ -92,7 +92,7 @@ services:
       - "${MIDDLEWARE_PORT:-4002}:4002"
     environment:
       - PORT=${MIDDLEWARE_PORT:-4002}
-      - SERVICE_ROUTES_JSON={"routes":[{"route":"mongo","api":"http://g7-mongo:${G7_MONGO_PORT:-4001}"},{"route":"focus-factor","api":"http://g7-focus-factor:4002"}]}
+      - SERVICE_ROUTES_JSON={"routes":[{"route":"mongo","api":"http://g7-mongo:${G7_MONGO_PORT:-4001}"},{"route":"focus-factor","api":"http://g7-focus-factor:4003"}]}
     depends_on:
       - g7-mongo
 
