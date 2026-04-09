@@ -3,7 +3,7 @@ import path from "path";
 import shell from "shelljs";
 import { runPMD } from "../pmdRunner.js";
 import { execWithTimeout } from "../utils/utils.js"
-import { createDefect, saveDefectCount } from "../services/mongoApi.js"
+import { createDefect, saveDefectCount, getDefectsByRepo, markDefectsFixed } from "../services/mongoApi.js"
 
 export const runPMDAnalysis = async (req, res) => {
     const { repoPath } = req.body;
@@ -70,12 +70,26 @@ export const cloneAndAnalyzeRepo = async (req, res) => {
         const reportJson = JSON.parse(reportContent);
 
         const violations = reportJson?.files?.flatMap(file =>
-          (file?.violations ?? []).map(v => ({ rule: v.rule, message: v.description }))
+          (file?.violations ?? []).map(v => ({ filepath: file.filename, rule: v.rule, message: v.description }))
         ) ?? [];
         const defectCount = violations.length;
 
-        const defectPromises = violations.map(v => createDefect(repoName, v.rule, v.message));
-        await Promise.all([...defectPromises, saveDefectCount(repoName, defectCount)]);
+        const existingDefects = await getDefectsByRepo(repoName);
+
+        const defectKey = (d) => `${d.filepath}::${d.rule}::${d.message}`;
+        const existingSet = new Set(existingDefects.map(defectKey));
+        const newViolationSet = new Set(violations.map(defectKey));
+
+        const toCreate = violations.filter(v => !existingSet.has(defectKey(v)));
+        const toFix = existingDefects
+          .filter(d => !newViolationSet.has(defectKey(d)))
+          .map(d => d._id);
+
+        const promises = [];
+        promises.push(...toCreate.map(v => createDefect(repoName, v.filepath, v.rule, v.message)));
+        if (toFix.length > 0) promises.push(markDefectsFixed(toFix));
+        promises.push(saveDefectCount(repoName, defectCount));
+        await Promise.all(promises);
 
         shell.rm("-rf", repoPath);
 
