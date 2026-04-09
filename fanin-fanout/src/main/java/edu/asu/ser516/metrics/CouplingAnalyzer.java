@@ -135,14 +135,43 @@ public class CouplingAnalyzer {
         Map<String, Integer> classFanOut = getFanOut();
         Map<String, Integer> packageFanOut = new HashMap<>();
 
-        for(Map.Entry<String, Integer> entry : classFanOut.entrySet()) {
+        for (Map.Entry<String, Integer> entry : classFanOut.entrySet()) {
             String className = entry.getKey();
             int fanOut = entry.getValue();
 
-            String packageName = className.contains(".") ? className.substring(0, className.lastIndexOf('.')) : "(default)";
+            String packageName = className.contains(".") ? className.substring(0, className.lastIndexOf('.'))
+                    : "(default)";
             packageFanOut.merge(packageName, fanOut, Integer::sum);
         }
 
         return packageFanOut;
+    }
+
+    public Map<String, Integer> getPackageFanIn() {
+        Map<String, Integer> classFanIn = getFanIn();
+        Map<String, Integer> packageFanIn = new HashMap<>();
+
+        for (Map.Entry<String, Integer> entry : classFanIn.entrySet()) {
+            String className = entry.getKey();
+            int fanIn = entry.getValue();
+
+            String packageName = className.contains(".")
+                    ? className.substring(0, className.lastIndexOf('.'))
+                    : "(default)";
+
+            packageFanIn.merge(packageName, fanIn, Integer::sum);
+        }
+
+        return packageFanIn;
+    }
+
+    public Map<String, Integer> getProjectFanIn() {
+        int total = getFanIn().values().stream()
+                .mapToInt(Integer::intValue)
+                .sum();
+
+        Map<String, Integer> projectFanIn = new LinkedHashMap<>();
+        projectFanIn.put("project", total);
+        return projectFanIn;
     }
 }
