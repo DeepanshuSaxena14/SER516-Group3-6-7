@@ -12,10 +12,23 @@ public class Metrics {
         this.afferent = afferent;
         this.efferent = efferent;
     }
+
     @Override
     public String toString() {
         return "Class: " + className +
                 " | Afferents: " + afferent +
                 " | Efferents: " + efferent;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public int getAfferent() {
+        return afferent;
+    }
+
+    public int getEfferent() {
+        return efferent;
     }
 }
