@@ -425,4 +425,81 @@ class FanOutComputerTest {
         assertTrue(fanOut.containsKey("A"));
         assertFalse(fanOut.containsKey("B"));  // B has no outgoing refs
     }
+
+    @Nested
+    @DisplayName("11. Project-level Fan-Out (aggregate)")
+    class ProjectLevelFanOut {
+
+        @Test
+        @DisplayName("Empty project has project fan-out of zero")
+        void emptyProjectHasFanOutZero() {
+            int result = FanOutComputer.computeProjectFanOut(List.of());
+            assertEquals(0, result, "Empty reference list should yield project fan-out of 0");
+        }
+
+        @Test
+        @DisplayName("Single class with no deps yields project fan-out zero")
+        void singleClassNoRefsYieldsZero() {
+            // A only self-references — no external deps
+            int result = FanOutComputer.computeProjectFanOut(List.of(ref("A", "A")));
+            assertEquals(0, result, "Pure self-reference contributes nothing to project fan-out");
+        }
+
+        @Test
+        @DisplayName("Single class project fan-out equals its class fan-out")
+        void singleClassProjectEqualsClassFanOut() {
+            // A -> B, A -> C  =>  class fan-out 2  =>  project fan-out 2
+            int result = FanOutComputer.computeProjectFanOut(
+                    List.of(ref("A", "B"), ref("A", "C")));
+            assertEquals(2, result);
+        }
+
+        @Test
+        @DisplayName("Project fan-out is sum of all individual class fan-outs")
+        void projectFanOutIsSumOfClassFanOuts() {
+            // Service -> Repo(1), Model(1), Util(1)  fan-out = 3
+            // Controller -> Service(1), Model(1)     fan-out = 2
+            // total project = 5
+            List<ClassReference> refs = List.of(
+                    ref("Service", "Repo"),
+                    ref("Service", "Model"),
+                    ref("Service", "Util"),
+                    ref("Controller", "Service"),
+                    ref("Controller", "Model")
+            );
+            int result = FanOutComputer.computeProjectFanOut(refs);
+            assertEquals(5, result, "Project fan-out should be sum of all class fan-outs");
+        }
+
+        @Test
+        @DisplayName("Self-references are excluded from project fan-out total")
+        void selfReferencesExcludedFromProjectTotal() {
+            // A -> A (self), A -> B  =>  class A fan-out = 1  =>  project = 1
+            int result = FanOutComputer.computeProjectFanOut(
+                    List.of(ref("A", "A"), ref("A", "B")));
+            assertEquals(1, result);
+        }
+
+        @Test
+        @DisplayName("Duplicate references are deduplicated before summing")
+        void duplicateRefsDeduplicatedBeforeSumming() {
+            // A -> B appears 3 times but fan-out for A = 1  =>  project = 1
+            int result = FanOutComputer.computeProjectFanOut(
+                    List.of(ref("A", "B"), ref("A", "B"), ref("A", "B")));
+            assertEquals(1, result);
+        }
+
+        @Test
+        @DisplayName("Three classes summed correctly")
+        void threeClassesSummedCorrectly() {
+            // A->X(1), B->X+Y(2), C->X+Y+Z(3)  => project = 6
+            List<ClassReference> refs = List.of(
+                    ref("A", "X"),
+                    ref("B", "X"), ref("B", "Y"),
+                    ref("C", "X"), ref("C", "Y"), ref("C", "Z")
+            );
+            int result = FanOutComputer.computeProjectFanOut(refs);
+            assertEquals(6, result);
+        }
+    }
 }

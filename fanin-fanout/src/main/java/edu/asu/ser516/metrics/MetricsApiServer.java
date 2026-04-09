@@ -23,7 +23,8 @@ public final class MetricsApiServer {
                     config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
                 })
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
-                .get("/metrics/fanin",  MetricsApiServer::handleFanIn);
+                .get("/metrics/fanin",  MetricsApiServer::handleFanIn)
+                .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods);
     }
 
     public static void main(String[] args) {
@@ -168,10 +169,7 @@ public final class MetricsApiServer {
 
             MetricDbWriter.writeFanIn(classLevelFanIn);
 
-            // Method-level Fan-In via MethodCouplingAnalyzer
-            MethodCouplingAnalyzer methodAnalyzer = new MethodCouplingAnalyzer(javaFiles);
-            methodAnalyzer.analyze();
-            Map<String, Integer> methodLevelFanIn = methodAnalyzer.getFanIn()
+            Map<String, Integer> methodLevelFanIn = FunctionFanInComputer.compute(javaFiles)
                     .entrySet().stream()
                     .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
                     .collect(Collectors.toMap(
@@ -181,6 +179,35 @@ public final class MetricsApiServer {
                             LinkedHashMap::new));
 
             ctx.json(toUnifiedFanInJson(classLevelFanIn, methodLevelFanIn));
+
+        } catch (IOException e) {
+            sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
+        }
+    }
+
+    private static void handleFanInMethods(Context ctx) {
+        Path root;
+        try {
+            root = validatePath(ctx);
+        } catch (IllegalArgumentException e) {
+            sendError(ctx, e.getMessage());
+            return;
+        }
+
+        try {
+            List<Path> javaFiles = SourceScanner.findJavaFiles(root);
+            Map<String, Integer> methodFanIn = FunctionFanInComputer.compute(javaFiles)
+                    .entrySet().stream()
+                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (e1, e2) -> e1,
+                            LinkedHashMap::new));
+
+            MetricDbWriter.writeFanIn(methodFanIn, "method");
+
+            ctx.json(toMethodFanInJsonArray(methodFanIn));
 
         } catch (IOException e) {
             sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());

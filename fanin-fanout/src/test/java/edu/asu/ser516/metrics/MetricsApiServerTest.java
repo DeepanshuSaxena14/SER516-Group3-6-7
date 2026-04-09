@@ -269,4 +269,55 @@ class MetricsApiServerTest {
             });
         }
     }
+
+    @Nested
+    @DisplayName("GET /metrics/fanin/methods")
+    class FanInMethodsPath {
+        @Test
+        @DisplayName("Returns HTTP 200 for a valid project path")
+        void returns200ForValidPath() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                var response = client.get("/metrics/fanin/methods?path=" + ProjectPath);
+                assertEquals(200, response.code());
+            });
+        }
+
+        @Test
+        @DisplayName("Response body is a JSON array with method and fanIn on each entry")
+        void responseIsArrayWithMethodAndFanIn() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                var response = client.get("/metrics/fanin/methods?path=" + ProjectPath);
+                assertNotNull(response.body());
+                String body = response.body().string();
+                assertTrue(body.trim().startsWith("["), "Response should be a JSON array");
+                assertTrue(body.contains("\"method\""),
+                        "Each entry must have a 'method' key");
+                assertTrue(body.contains("\"fanIn\""),
+                        "Each entry must have a 'fanIn' key");
+            });
+        }
+
+        @Test
+        @DisplayName("Returns HTTP 400 when 'path' query param is missing")
+        void returns400WhenPathMissing() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                var response = client.get("/metrics/fanin/methods");
+                assertEquals(400, response.code());
+            });
+        }
+
+        @Test
+        @DisplayName("Two consecutive requests return identical results")
+        void consecutiveRequestsAreIdentical() {
+            JavalinTest.test(MetricsApiServer.create(), (server, client) -> {
+                String body1 = Objects.requireNonNull(client
+                        .get("/metrics/fanin/methods?path=" + ProjectPath)
+                        .body()).string();
+                String body2 = Objects.requireNonNull(client
+                        .get("/metrics/fanin/methods?path=" + ProjectPath)
+                        .body()).string();
+                assertEquals(body1, body2);
+            });
+        }
+    }
 }

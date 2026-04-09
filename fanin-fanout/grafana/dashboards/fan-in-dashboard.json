@@ -637,6 +637,77 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 11,
+      "title": "Fan-In Trend by Package (Over Time)",
+      "description": "Timeseries panel showing how package-level fan-in totals evolve across analysis runs. Each line represents one package. Populated when metrics are persisted with scope='package'.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "postgres",
+        "uid": "postgres-metrics"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Fan-In (Package Total)",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "postgres-metrics"
+          },
+          "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_in\nFROM fan_in_metrics\nWHERE scope = 'package'\n  AND $__timeFilter(recorded_at)\nORDER BY recorded_at;",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "schemaVersion": 39,
@@ -717,5 +788,5 @@
   "timezone": "browser",
   "title": "Fan-In Metrics Dashboard",
   "uid": "fan-in-metrics",
-  "version": 1
+  "version": 2
 }
