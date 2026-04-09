@@ -1,14 +1,14 @@
 # SER516-Group3-6-7
-The code repository for Groups 3,6, and 7 to compute different metrics of a project.
+The code repository for Groups 3, 6, and 7 to compute different metrics of a project.
 
 # Project Structure
 
 ```text
 SER516-Group3-6-7/
-├── afferent-efferent/         # Group 3
-├── defects-discovered/        # Group 7
-├── fanin-fanout/              # Group 6
-├── middleware/                # Group 3-6-7 shared middleware
+├── afferent-efferent/         # Group 3 — Afferent/Efferent coupling metrics
+├── defects-discovered/        # Group 7 — PMD defect analysis + frontend
+├── fanin-fanout/              # Group 6 — Fan-In/Fan-Out coupling metrics
+├── middleware/                # Shared middleware — orchestrates all services
 └── docker-compose.yml         # Root Docker Compose file
 └── Jenkinsfile                # Root Jenkins automations file
 ```
@@ -25,6 +25,23 @@ Verify installation:
 docker --version
 docker compose version
 ```
+
+## Environment Setup
+
+Copy the example environment file and fill in the required values:
+
+```bash
+cp .env.example .env
+```
+
+Set the following variable in your `.env` file:
+
+```
+SUPABASE_PASSWORD=your_supabase_password_here
+```
+
+> [!NOTE]
+> Contact a team member for the actual Supabase password. Never commit the `.env` file to the repository.
 
 # Start integrated services
 ```bash
@@ -54,104 +71,194 @@ docker compose run --rm g3-ae-metrics
 docker compose down -v
 ```
 
-### Accessing Each Running Service
+---
 
-#### FanIn/Out Metrics
-- URL: `http://localhost:8082`
-  
+## How It Works
+
+When a user enters a public GitHub repository URL in the frontend and clicks **Analyse**, the following happens automatically:
+
+1. The frontend sends a `POST /analyze` request to the middleware
+2. The middleware fans out **in parallel** to:
+   - **g7-pmd** — clones the repo and runs PMD static analysis
+   - **g6-metrics** — clones the repo, computes Fan-In and Fan-Out metrics, persists results to Supabase
+3. Both services write their results to Supabase cloud PostgreSQL
+4. The frontend displays a **"View Dashboards on Grafana →"** link on completion
+5. The hosted Grafana dashboards automatically reflect the latest results
+
 > [!NOTE]
-> As of the latest current version, the repo being analyzed needs to be already cloned and on the device using "Project Path". We will integrate the cloning api from the pmd module at a later release
+> GitHub repository URLs **must end with `.git`** for cloning to work correctly with JGit.
+> Example: `https://github.com/junit-team/junit4.git`
 
-#### FIFO Endpoints: 
-  - get `http://localhost:8082/metrics/fanout?path={Project Path}`
-  - get `http://localhost:8082/metrics/fanin?path={Project Path}`
+---
 
-#### PostgreSQL (Local — for g6-postgres container)
+## Accessing Each Running Service
+
+### Frontend (Unified Analysis Entry Point)
+- URL: `http://localhost:8081`
+
+The main entry point for end-to-end analysis. Enter a public GitHub repository URL and click **Analyse**. Results are persisted to Supabase and viewable on the hosted Grafana dashboards.
+
+---
+
+### Middleware (Orchestration Layer)
+- URL: `http://localhost:4002`
+
+The middleware routes requests to backend services. It exposes both a fan-out orchestration endpoint and proxied routes to individual services.
+
+#### Analyze endpoint — triggers all metric services in parallel
+- `POST /analyze`
+
+Request body:
+```json
+{ "github_link": "https://github.com/owner/repo.git" }
+```
+
+Response:
+```json
+{
+  "github_link": "https://github.com/owner/repo.git",
+  "pmd": { ... },
+  "metrics": {
+    "status": "ok",
+    "javaFilesAnalyzed": 471,
+    "classesWithFanOut": 398,
+    "classesWithFanIn": 450
+  },
+  "errors": []
+}
+```
+
+> [!NOTE]
+> The `errors` array will contain partial failures if one service is unavailable. The other service's results are still returned.
+
+---
+
+### Fan-In/Fan-Out Metrics (g6-metrics)
+- URL: `http://localhost:8082`
+
+#### Endpoints
+
+Analyze a **local path** (repo already cloned on disk):
+- `GET /metrics/fanout?path={absolute/path/to/java/project}`
+- `GET /metrics/fanin?path={absolute/path/to/java/project}`
+
+Analyze a **GitHub repository directly** by URL (clones automatically):
+- `GET /metrics/analyze?github_link={GitHub URL}`
+
+Example:
+```bash
+curl "http://localhost:8082/metrics/analyze?github_link=https://github.com/junit-team/junit4.git"
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "repo": "https://github.com/junit-team/junit4.git",
+  "javaFilesAnalyzed": 471,
+  "classesWithFanOut": 398,
+  "classesWithFanIn": 450
+}
+```
+
+> [!NOTE]
+> The `/metrics/analyze` endpoint clones the repository, runs both Fan-In and Fan-Out analysis,
+> and automatically persists results to Supabase for Grafana. GitHub URLs must end with `.git`.
+
+---
+
+### PMD Backend (g7-pmd)
+- URL: `http://localhost:4000`
+
+#### Run PMD analysis
+- `POST /api/github/clone`
+
+Request body:
+```json
+{ "github_link": "https://github.com/owner/repo.git" }
+```
+
+---
+
+### PostgreSQL (Local — g6-postgres container)
 - Host: `localhost`
 - Port: `5433`
 - Database: `metrics`
 - Username: `grafana`
 - Password: `grafana`
 
-#### PostgreSQL (Cloud — Supabase, used by Grafana and metrics service)
+### PostgreSQL (Cloud — Supabase, used by Grafana and all metric services)
 - Host: `aws-1-us-east-1.pooler.supabase.com`
 - Port: `5432`
 - Database: `postgres`
 - Username: `postgres.ouogetytffnkwjdiqjxv`
 - SSL: required
 
-#### Grafana (Hosted)
+---
+
+### Grafana (Hosted)
 - URL: `https://swent0linux.asu.edu/grafana/`
-- Username: your ASU Grafana account
-- Dashboards: Fan-Out Metrics Dashboard, Fan-In Metrics Dashboard
+- Org: Group-6
+- Dashboards: Fan-Out Metrics, Fan-In Metrics
 
 > [!NOTE]
-> The hosted Grafana connects to a Supabase cloud PostgreSQL instance.
-> Dashboards update automatically whenever `docker compose up` is running
-> on any machine — no manual configuration required before demos.
+> The hosted Grafana connects to the Supabase cloud PostgreSQL instance.
+> Dashboards update automatically after each `/analyze` call — no manual refresh required.
 
-#### Grafana (Local — optional, for development only)
+### Grafana (Local — optional, for development only)
 - URL: `http://localhost:3000`
 - Username: `admin`
 - Password: `admin`
 - Start with: `docker compose --profile local up`
 
-#### Middleware
-- URL: `http://localhost:4002`
+---
 
-#### PMD Backend
-- URL: `http://localhost:4000`
-
-#### PMD Endpoints:
-  - #### Run pmd analysis
-    - post `/api/github/clone`
-
-take in a json body of this format:
-```JSON
-{ "github_link": "URL" }
-```
-
-#### Frontend
-- URL: `http://localhost:80`
-
-> [!NOTE]
-> This frontend's only purpose is to allow the user to enter a GitHub repo URL to analyze instead of typing it out as a command. It is not the main dashboard used for any actual UI or statistics. The results are only returned in the api response and not shown in this frontend. The metrics will be integrated with grafana in this sprint or the next.
-
-
-#### Mongo DB Server (For Focus Factor)
+### Mongo DB Server (For Focus Factor)
 - URL: `http://localhost:4001`
-  
+
 #### Mongo Endpoints
-  - #### Stats (Focus factor entry)
-    - Get all stats   
-      - get `/api/stat`
 
-    - Create stat
-      - post `/api/stat`
+**Stats (Focus Factor entry)**
 
-    - Update stat
-      - put `/api/stat/:id`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/stat` | Get all stats |
+| POST | `/api/stat` | Create stat |
+| PUT | `/api/stat/:id` | Update stat |
+| DELETE | `/api/stat/:id` | Delete stat |
 
-    - Delete stat
-      - delete `/api/stat/:id`
-
-example json body for focus factor create and update stat:
-```JSON
+Example request body for create and update:
+```json
 {
   "workCapacity": 80,
   "velocity": 45
 }
 ```
 
-## Jenkins
-- We have automation pipelines set to update grafana, run any available static analysis and unit tests whenever there is a push on any branches
-- To access Jenkins use this link: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
+---
 
-# More Info
+## Jenkins
+We have automation pipelines set to update Grafana, run available static analysis and unit tests whenever there is a push on any branch.
+
+- Jenkins URL: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
+
+---
+
+## More Info
 
 > [!NOTE]
-> #### Afferent/Efferent Service
-> Group 3 is not exposed as a browser-based service. Run it manually with:
->```bash
->docker compose run --rm g3-ae-metrics
->```
+> #### Afferent/Efferent Service (Group 3)
+> The AE service is not exposed as a browser-based service. It runs interactively via Docker:
+> ```bash
+> docker compose run --rm g3-ae-metrics
+> ```
+> Select option `2` to analyze a GitHub repository. Results are persisted to the `afferent_efferent_result` table in Supabase.
+>
+> When running with Supabase integration, pass the JDBC connection details explicitly:
+> ```bash
+> docker compose --profile manual run --rm \
+>   -e "JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require" \
+>   -e "JDBC_USER=postgres.ouogetytffnkwjdiqjxv" \
+>   -e "JDBC_PASSWORD=<password>" \
+>   g3-ae-metrics
+> ```
