@@ -3,6 +3,7 @@ import express from "express";
 import { fileURLToPath } from "node:url";
 import { createServiceProxy } from "./src/createServiceProxy.js";
 import { loadServiceConfig } from "./src/loadServiceConfig.js";
+import { analyzeRepo } from "./src/analyzeController.js";
 
 const PORT = Number(process.env.PORT) || 4002;
 
@@ -14,6 +15,15 @@ export const createApp = () => {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
 
+  app.post("/analyze", analyzeRepo);
+
+  app.get("/health", (req, res) => {
+    res.json({
+      status: "ok",
+      routes: serviceConfig.routes.map(({ route }) => route),
+    });
+  });
+
   for (const service of serviceConfig.routes) {
     app.use(service.route, createServiceProxy(service));
   }
@@ -22,14 +32,10 @@ export const createApp = () => {
     res.json({
       message: "Middleware server running",
       port: PORT,
-      routes: serviceConfig.routes.map(({ route, api }) => ({ route, api })),
-    });
-  });
-
-  app.get("/health", (req, res) => {
-    res.json({
-      status: "ok",
-      routes: serviceConfig.routes.map(({ route }) => route),
+      routes: [
+        { route: "/analyze", description: "POST — orchestrates all metric services" },
+        ...serviceConfig.routes.map(({ route, api }) => ({ route, api })),
+      ],
     });
   });
 
