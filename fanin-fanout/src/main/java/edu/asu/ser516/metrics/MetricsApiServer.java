@@ -14,14 +14,16 @@ import java.util.stream.Collectors;
 
 public final class MetricsApiServer {
 
-    private MetricsApiServer() {}
+    private MetricsApiServer() {
+    }
 
     public static Javalin create() {
         return Javalin.create(config -> {
-                    config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
-                })
+            config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
+        })
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
-                .get("/metrics/fanin",  MetricsApiServer::handleFanIn);
+                .get("/metrics/fanin", MetricsApiServer::handleFanIn)
+                .get("/metrics/analyze", MetricsApiServer::handleAnalyze);
     }
 
     public static void main(String[] args) {
@@ -29,6 +31,10 @@ public final class MetricsApiServer {
         create().start(port);
         System.out.println("Metrics API server started on port " + port);
     }
+
+    // -------------------------------------------------------------------------
+    // Handlers
+    // -------------------------------------------------------------------------
 
     private static void handleFanOut(Context ctx) {
         Path root;
@@ -51,12 +57,11 @@ public final class MetricsApiServer {
                             Map.Entry::getKey,
                             Map.Entry::getValue,
                             (e1, e2) -> e1,
-                            LinkedHashMap::new
-                    ));
+                            LinkedHashMap::new));
 
             ctx.json(toFanOutJsonArray(sorted));
-            
-            // Persist to DB for Grafana
+
+            // Persist to Supabase for Grafana
             MetricDbWriter.writeFanOut(sorted);
 
         } catch (IOException e) {
@@ -102,13 +107,85 @@ public final class MetricsApiServer {
 
             ctx.json(toUnifiedFanInJson(classLevelFanIn, methodLevelFanIn));
 
-            // Persist to DB for Grafana
+            // Persist to Supabase for Grafana
             MetricDbWriter.writeFanIn(classLevelFanIn);
 
         } catch (IOException e) {
             sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
         }
     }
+
+    /**
+     * New endpoint: accepts a GitHub URL, clones the repo, runs fan-in/fan-out,
+     * persists results to Supabase, and returns a summary.
+     *
+     * Usage: GET /metrics/analyze?github_link=https://github.com/owner/repo
+     */
+    private static void handleAnalyze(Context ctx) {
+        String repoUrl = ctx.queryParam("github_link");
+
+        if (repoUrl == null || repoUrl.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Required query parameter 'github_link' is missing. " +
+                    "Usage: /metrics/analyze?github_link=https://github.com/owner/repo");
+            return;
+        }
+
+        try {
+            // Step 1 — Clone the repository
+            Path root = RepoCloner.cloneRepo(repoUrl);
+
+            // Step 2 — Find all Java files
+            List<Path> javaFiles = SourceScanner.findJavaFiles(root);
+
+            if (javaFiles.isEmpty()) {
+                sendError(ctx, "No Java files found in repository: " + repoUrl);
+                return;
+            }
+
+            // Step 3 — Compute Fan-Out
+            Map<String, Set<String>> outgoing = OutgoingReferenceExtractor.extractOutgoingRefs(javaFiles);
+            List<ClassReference> edges = ReferenceAdapters.toEdges(outgoing);
+            Map<String, Integer> fanOut = FanOutComputer.computeFanOut(edges)
+                    .entrySet().stream()
+                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey, Map.Entry::getValue,
+                            (e1, e2) -> e1, LinkedHashMap::new));
+
+            // Step 4 — Compute Fan-In
+            CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
+            classAnalyzer.analyze();
+            Map<String, Integer> fanIn = classAnalyzer.getFanIn()
+                    .entrySet().stream()
+                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey, Map.Entry::getValue,
+                            (e1, e2) -> e1, LinkedHashMap::new));
+
+            // Step 5 — Persist to Supabase for Grafana
+            MetricDbWriter.writeFanOut(fanOut);
+            MetricDbWriter.writeFanIn(fanIn);
+
+            // Step 6 — Return summary
+            ctx.contentType("application/json");
+            ctx.result("{" +
+                    "\"status\":\"ok\"," +
+                    "\"repo\":\"" + jsonEscape(repoUrl) + "\"," +
+                    "\"javaFilesAnalyzed\":" + javaFiles.size() + "," +
+                    "\"classesWithFanOut\":" + fanOut.size() + "," +
+                    "\"classesWithFanIn\":" + fanIn.size() +
+                    "}");
+
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Analysis failed for repo: " + repoUrl + " — " + e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
 
     private static Path validatePath(Context ctx) {
         String pathParam = ctx.queryParam("path");
@@ -117,24 +194,19 @@ public final class MetricsApiServer {
             ctx.status(400);
             throw new IllegalArgumentException(
                     "Required query parameter 'path' is missing or empty. " +
-                            "Usage: /metrics/fanout?path=/absolute/path/to/java/project"
-            );
+                            "Usage: /metrics/fanout?path=/absolute/path/to/java/project");
         }
 
         Path root = Path.of(pathParam);
 
         if (!Files.exists(root)) {
             ctx.status(400);
-            throw new IllegalArgumentException(
-                    "Path does not exist: " + pathParam
-            );
+            throw new IllegalArgumentException("Path does not exist: " + pathParam);
         }
 
         if (!Files.isDirectory(root)) {
             ctx.status(400);
-            throw new IllegalArgumentException(
-                    "Path is not a directory: " + pathParam
-            );
+            throw new IllegalArgumentException("Path is not a directory: " + pathParam);
         }
 
         return root;
@@ -148,15 +220,15 @@ public final class MetricsApiServer {
 
     private static String toFanOutJsonArray(Map<String, Integer> fanOut) {
         StringBuilder sb = new StringBuilder("[\n");
-        int i = 0;
-        int n = fanOut.size();
+        int i = 0, n = fanOut.size();
         for (Map.Entry<String, Integer> e : fanOut.entrySet()) {
             sb.append("  {\"class\":\"")
                     .append(jsonEscape(e.getKey()))
                     .append("\",\"fanOut\":")
                     .append(e.getValue())
                     .append("}");
-            if (++i < n) sb.append(",");
+            if (++i < n)
+                sb.append(",");
             sb.append("\n");
         }
         sb.append("]");
@@ -164,10 +236,9 @@ public final class MetricsApiServer {
     }
 
     private static String toUnifiedFanInJson(Map<String, Integer> classLevel,
-                                             Map<String, Integer> methodLevel) {
+            Map<String, Integer> methodLevel) {
         StringBuilder sb = new StringBuilder("{\n");
 
-        // classLevel array
         sb.append("  \"classLevel\": [\n");
         int i = 0, n = classLevel.size();
         for (Map.Entry<String, Integer> e : classLevel.entrySet()) {
@@ -176,21 +247,23 @@ public final class MetricsApiServer {
                     .append("\",\"fanIn\":")
                     .append(e.getValue())
                     .append("}");
-            if (++i < n) sb.append(",");
+            if (++i < n)
+                sb.append(",");
             sb.append("\n");
         }
         sb.append("  ],\n");
 
-        // methodLevel array
         sb.append("  \"methodLevel\": [\n");
-        i = 0; n = methodLevel.size();
+        i = 0;
+        n = methodLevel.size();
         for (Map.Entry<String, Integer> e : methodLevel.entrySet()) {
             sb.append("    {\"method\":\"")
                     .append(jsonEscape(e.getKey()))
                     .append("\",\"fanIn\":")
                     .append(e.getValue())
                     .append("}");
-            if (++i < n) sb.append(",");
+            if (++i < n)
+                sb.append(",");
             sb.append("\n");
         }
         sb.append("  ]\n}");
@@ -199,7 +272,8 @@ public final class MetricsApiServer {
     }
 
     private static String jsonEscape(String s) {
-        if (s == null) return "";
+        if (s == null)
+            return "";
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
