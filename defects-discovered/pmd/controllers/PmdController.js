@@ -3,6 +3,7 @@ import path from "path";
 import shell from "shelljs";
 import { runPMD } from "../pmdRunner.js";
 import { execWithTimeout } from "../utils/utils.js"
+import { createDefect, saveDefectCount } from "../services/mongoApi.js"
 
 export const runPMDAnalysis = async (req, res) => {
     const { repoPath } = req.body;
@@ -58,7 +59,7 @@ export const cloneAndAnalyzeRepo = async (req, res) => {
     }
 
     try {
-    const reportDir = path.resolve("./reports");
+        const reportDir = path.resolve("./reports");
         const reportPath = path.join(
             reportDir,
             `${repoName}-pmd-report.json`,
@@ -68,9 +69,13 @@ export const cloneAndAnalyzeRepo = async (req, res) => {
         const reportContent = fs.readFileSync(generatedReportPath, "utf-8");
         const reportJson = JSON.parse(reportContent);
 
-        const defectCount = reportJson?.files?.reduce((total, file) => {
-          return total + (file?.violations?.length ?? 0)
-        }, 0)
+        const violations = reportJson?.files?.flatMap(file =>
+          (file?.violations ?? []).map(v => ({ rule: v.rule, message: v.description }))
+        ) ?? [];
+        const defectCount = violations.length;
+
+        const defectPromises = violations.map(v => createDefect(repoName, v.rule, v.message));
+        await Promise.all([...defectPromises, saveDefectCount(repoName, defectCount)]);
 
         shell.rm("-rf", repoPath);
 
