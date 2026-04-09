@@ -3,6 +3,7 @@ import dotenv from "dotenv"
 import cors from "cors"
 import mongoose from "mongoose";
 import crudRoutes from "./routes/CrudRoutes.js";
+import defectRoutes from "./routes/DefectRoutes.js";
 
 dotenv.config()
 
@@ -13,6 +14,7 @@ server.use(cors())
 server.use(express.json())
 
 server.use("/api", crudRoutes);
+server.use("/api", defectRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)

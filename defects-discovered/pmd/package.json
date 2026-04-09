@@ -15,22 +15,17 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "lint": "eslint . --ext .js",
-    "lint:fix": "npm run lint -- --fix",
     "start": "nodemon server.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "shelljs": "^0.10.0"
+    "shelljs": "^0.10.0",
+    "supertest": "^7.2.2"
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
-    "nodemon": "^3.1.11",
-    "supertest": "^7.1.4",
-    "vitest": "^2.1.9"
+    "nodemon": "^3.1.11"
   }
 }
