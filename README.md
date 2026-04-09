@@ -33,7 +33,7 @@ docker compose up --build
 
 > [!NOTE]
 > The local `g6-grafana` container is disabled by default (migrated to hosted Grafana).
-> Use the hosted Grafana at https://swenv0linux.asu.edu/grafana/ for dashboards.
+> Use the hosted Grafana at https://swent0linux.asu.edu/grafana/ for dashboards.
 > To start the local Grafana container for development, run:
 > ```bash
 > docker compose --profile local up --build
@@ -66,32 +66,38 @@ docker compose down -v
   - get `http://localhost:8082/metrics/fanout?path={Project Path}`
   - get `http://localhost:8082/metrics/fanin?path={Project Path}`
 
-#### PostgreSQL
+#### PostgreSQL (Local — for g6-postgres container)
 - Host: `localhost`
 - Port: `5433`
 - Database: `metrics`
 - Username: `grafana`
 - Password: `grafana`
 
+#### PostgreSQL (Cloud — Supabase, used by Grafana and metrics service)
+- Host: `aws-1-us-east-1.pooler.supabase.com`
+- Port: `5432`
+- Database: `postgres`
+- Username: `postgres.ouogetytffnkwjdiqjxv`
+- SSL: required
+
 #### Grafana (Hosted)
-- URL: `https://swenv0linux.asu.edu/grafana/`
+- URL: `https://swent0linux.asu.edu/grafana/`
 - Username: your ASU Grafana account
 - Dashboards: Fan-Out Metrics Dashboard, Fan-In Metrics Dashboard
 
-> [!IMPORTANT]
-> The hosted Grafana connects to the PostgreSQL datasource via the machine running `docker compose up`.
-> The datasource is configured with a direct IP address on the ASU network.
-> **Before a demo session**, whoever runs `docker compose up` must:
-> 1. Find their ASU Ethernet IP: run `ipconfig` and look for the adapter with `asu.edu` DNS suffix
-> 2. Update the `grafana-postgresql-datasource` Host URL in hosted Grafana to `{YOUR_IP}:5433`
-> 3. Hit **Save & test** to confirm the green connection status
-> 4. Run the FIFO endpoints above to populate fresh data into the dashboards
+> [!NOTE]
+> The hosted Grafana connects to a Supabase cloud PostgreSQL instance.
+> Dashboards update automatically whenever `docker compose up` is running
+> on any machine — no manual configuration required before demos.
 
 #### Grafana (Local — optional, for development only)
 - URL: `http://localhost:3000`
 - Username: `admin`
 - Password: `admin`
 - Start with: `docker compose --profile local up`
+
+#### Middleware
+- URL: `http://localhost:4002`
 
 #### PMD Backend
 - URL: `http://localhost:4000`
@@ -118,7 +124,7 @@ take in a json body of this format:
 #### Mongo Endpoints
   - #### Stats (Focus factor entry)
     - Get all stats   
-      - get `/api/stat `
+      - get `/api/stat`
 
     - Create stat
       - post `/api/stat`
@@ -139,7 +145,7 @@ example json body for focus factor create and update stat:
 
 ## Jenkins
 - We have automation pipelines set to update grafana, run any available static analysis and unit tests whenever there is a push on any branches
-- To access Jenkins use this link: https://swenv0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
+- To access Jenkins use this link: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
 
 # More Info
 
