@@ -24,6 +24,13 @@ vi.mock("../pmdRunner.js", () => ({
     }),
 }));
 
+vi.mock("../services/mongoApi.js", () => ({
+    getDefectsByRepo: vi.fn().mockResolvedValue([]),
+    createDefect: vi.fn().mockResolvedValue({}),
+    markDefectsFixed: vi.fn().mockResolvedValue({}),
+    saveDefectCount: vi.fn().mockResolvedValue({}),
+}));
+
 // The idea is to not actually clone any repos in tests, and run everything in a temp directory
 describe("GET /api/pmd/analyze", () => {
     let tmpDir;
@@ -66,7 +73,7 @@ describe("GET /api/pmd/analyze", () => {
         });
 
         const res = await request(app)
-            .get("/api/pmd/analyze?github_link=https://github.com/example/repo.git")
+            .get("/api/pmd/analyze?github_link=https://github.com/kgary/ser516public.git")
 
         expect(res.status).toBe(200);
 

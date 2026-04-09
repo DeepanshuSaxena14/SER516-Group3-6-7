@@ -73,16 +73,17 @@ docker compose down -v
 - URL: `http://localhost:4000`
 
 #### PMD Endpoints:
-  - #### Run pmd analysis
-    - post `/api/github/clone`
+- **Run PMD analysis (Local)**
+  - `POST /api/pmd/run-pmd`
+  - Body: `{ "repoPath": "/app/work/project" }`
+  - Returns `report` results.
 
-take in a json body of this format:
-```JSON
-{ "github_link": "URL" }
-```
+- **Clone and Analyze (GitHub)**
+  - `GET /api/pmd/analyze?github_link=URL`
+  - Returns `report` results.
 
 #### Frontend
-- URL: `http://localhost:80`
+- URL: `http://localhost:8081`
 
 > [!NOTE]
 > This frontend's only purpose is to allow the user to enter a GitHub repo URL to analyze instead of typing it out as a command. It is not the main dashboard used for any actual UI or statistics. The results are only returned in the api response and not shown in this frontend. The metrics will be integrated with grafana in this sprint or the next.
@@ -92,20 +93,17 @@ take in a json body of this format:
 - URL: `http://localhost:4001`
   
 #### Mongo Endpoints
-  - #### Stats (Focus factor entry)
-    - Get all stats   
-      - get `/api/stat `
+- **Defects Summary (Bug Count)**
+  - `GET /api/defects/summary`
+  - Returns the latest identified bug count.
 
-    - Create stat
-      - post `/api/stat`
+- **Stats (Focus factor entry)**
+  - Get all stats: `GET /api/stat`
+  - Create stat: `POST /api/stat`
+  - Update stat: `PUT /api/stat/:id`
+  - Delete stat: `DELETE /api/stat/:id`
 
-    - Update stat
-      - put `/api/stat/:id`
-
-    - Delete stat
-      - delete `/api/stat/:id`
-
-example json body for focus factor create and update stat:
+Example JSON body for Focus Factor create/update:
 ```JSON
 {
   "workCapacity": 80,
