@@ -3,6 +3,7 @@ package org.service;
 import java.util.List;
 import java.util.Scanner;
 
+import org.api.ApiServer;
 import org.github.CloneObject;
 import org.taiga.CruftMetrics;
 import org.taiga.DeliveryMetrics;
@@ -20,9 +21,21 @@ public class Main {
     //githubLoginObject GLO = new githubLoginObject();
     //public int choice = 1;
 
-    public static void main(String[] args) {
-        welcomeUser();
+    public static void main(String[] args) throws Exception {
+        // pass --server to run as an HTTP API instead of the CLI
+        if (args.length > 0 && args[0].equals("--server")) {
+            int port = 8080;
+            // allow overriding the port with a second arg
+            if (args.length > 1) {
+                port = Integer.parseInt(args[1]);
+            }
+            ApiServer.start(port);
+            // keep the main thread alive so the server doesn't die
+            Thread.currentThread().join();
+            return;
+        }
 
+        welcomeUser();
     }
 
 

@@ -75,9 +75,8 @@ services:
 
   g3-ae-metrics:
     build: ./afferent-efferent/AfferentEfferentService
-    profiles: ["manual"]
-    stdin_open: true
-    tty: true
+    ports:
+      - "${G3_AE_PORT:-8083}:8080"
     volumes:
       - g3-storage:/app/storage
 
