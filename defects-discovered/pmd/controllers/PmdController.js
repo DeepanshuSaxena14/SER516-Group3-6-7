@@ -78,7 +78,9 @@ const syncDefects = async (repoName, violations) => {
 
     const promises = [];
     promises.push(...toCreate.map(v => createDefect(repoName, v.filepath, v.rule, v.message)));
+
     if (toFix.length > 0) promises.push(markDefectsFixed(toFix));
+    
     promises.push(saveDefectCount(repoName, violations.length));
     await Promise.all(promises);
 };
