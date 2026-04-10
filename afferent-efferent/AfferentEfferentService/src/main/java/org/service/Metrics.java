@@ -3,7 +3,6 @@ package org.service;
 public class Metrics {
 
     private final String className;
-
     private final int afferent;
     private final int efferent;
 
@@ -11,13 +10,6 @@ public class Metrics {
         this.className = className;
         this.afferent = afferent;
         this.efferent = efferent;
-    }
-
-    @Override
-    public String toString() {
-        return "Class: " + className +
-                " | Afferents: " + afferent +
-                " | Efferents: " + efferent;
     }
 
     public String getClassName() {
@@ -30,5 +22,12 @@ public class Metrics {
 
     public int getEfferent() {
         return efferent;
+    }
+
+    @Override
+    public String toString() {
+        return "Class: " + className +
+                " | Afferents: " + afferent +
+                " | Efferents: " + efferent;
     }
 }
