@@ -36,7 +36,8 @@ public final class MetricsApiServer {
         })
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
-                .get("/metrics/analyze", MetricsApiServer::handleAnalyze);
+                .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
+                .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods);
     }
 
     public static void main(String[] args) {
