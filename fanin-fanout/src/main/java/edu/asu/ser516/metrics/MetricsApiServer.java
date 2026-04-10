@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,6 +17,18 @@ public final class MetricsApiServer {
 
     private MetricsApiServer() {
     }
+
+    // -------------------------------------------------------------------------
+    // Scope enum
+    // -------------------------------------------------------------------------
+
+    private enum Scope {
+        CLASS, PACKAGE, PROJECT
+    }
+
+    // -------------------------------------------------------------------------
+    // Server setup
+    // -------------------------------------------------------------------------
 
     public static Javalin create() {
         return Javalin.create(config -> {
@@ -67,92 +78,28 @@ public final class MetricsApiServer {
 
             switch (scope) {
                 case "package" -> {
-                    sorted = sortFanOutDescending(aggregateFanOutByPackage(classFanOut));
+                    sorted = sortDescending(aggregateFanOutByPackage(classFanOut));
                     jsonBody = toPackageFanOutJsonArray(sorted);
                     dbScope = "package";
                 }
                 case "project" -> {
-                    sorted = sortFanOutDescending(aggregateFanOutByProject(classFanOut, root));
+                    sorted = sortDescending(aggregateFanOutByProject(classFanOut, root));
                     jsonBody = toProjectFanOutJsonArray(sorted);
                     dbScope = "project";
                 }
                 default -> {
-                    sorted = sortFanOutDescending(classFanOut);
+                    sorted = sortDescending(classFanOut);
                     jsonBody = toFanOutJsonArray(sorted);
                     dbScope = "class";
                 }
             }
 
-            MetricDbWriter.writeFanOut(sorted, dbScope);
-
+            MetricDbWriter.writeFanOut(sorted);
             ctx.json(jsonBody);
 
         } catch (IOException e) {
             sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
         }
-    }
-            Map<String, Integer> sorted = fanOut.entrySet().stream()
-                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (e1, e2) -> e1,
-                            LinkedHashMap::new));
-
-            ctx.json(toFanOutJsonArray(sorted));
-
-            // Persist to Supabase for Grafana
-            MetricDbWriter.writeFanOut(sorted);
-
-        } catch (IOException e) {
-            sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
-        }
-        String s = scopeParam.trim().toLowerCase(Locale.ROOT);
-        return switch (s) {
-            case "class", "package", "project" -> s;
-            default -> {
-                ctx.status(400);
-                throw new IllegalArgumentException(
-                        "Invalid query parameter 'scope'. Allowed values: class, package, project."
-                );
-            }
-        };
-    }
-
-    private static Map<String, Integer> sortFanOutDescending(Map<String, Integer> fanOut) {
-        return fanOut.entrySet().stream()
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
-    }
-
-    /** Sums class-level fan-out per package (same convention as {@link CouplingAnalyzer#getPackageFanOut()}). */
-    private static Map<String, Integer> aggregateFanOutByPackage(Map<String, Integer> classFanOut) {
-        Map<String, Integer> packageFanOut = new HashMap<>();
-        for (Map.Entry<String, Integer> entry : classFanOut.entrySet()) {
-            String fqcn = entry.getKey();
-            String packageName = fqcn.contains(".")
-                    ? fqcn.substring(0, fqcn.lastIndexOf('.'))
-                    : "(default)";
-            packageFanOut.merge(packageName, entry.getValue(), Integer::sum);
-        }
-        return packageFanOut;
-    }
-
-    /** Single project row: name = last path segment, value = sum of class-level fan-out. */
-    private static Map<String, Integer> aggregateFanOutByProject(Map<String, Integer> classFanOut, Path root) {
-        Path fileName = root.getFileName();
-        String name = (fileName != null && !fileName.toString().isBlank())
-                ? fileName.toString()
-                : root.toAbsolutePath().toString();
-        int total = classFanOut.values().stream().mapToInt(Integer::intValue).sum();
-        Map<String, Integer> m = new LinkedHashMap<>();
-        m.put(name, total);
-        return m;
     }
 
     private static void handleFanIn(Context ctx) {
@@ -179,14 +126,7 @@ public final class MetricsApiServer {
                 case CLASS -> {
                     CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
                     classAnalyzer.analyze();
-                    Map<String, Integer> classLevel = classAnalyzer.getFanIn()
-                            .entrySet().stream()
-                            .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    Map.Entry::getValue,
-                                    (e1, e2) -> e1,
-                                    LinkedHashMap::new));
+                    Map<String, Integer> classLevel = sortDescending(classAnalyzer.getFanIn());
                     MetricDbWriter.writeFanIn(classLevel);
                     ctx.json(toFanInJsonArray(classLevel, "class"));
                 }
@@ -225,43 +165,11 @@ public final class MetricsApiServer {
         }
     }
 
-    private static void handleFanInMethods(Context ctx) {
-        Path root;
-        try {
-            root = validatePath(ctx);
-        } catch (IllegalArgumentException e) {
-            sendError(ctx, e.getMessage());
-            return;
-        }
-
-        try {
-            List<Path> javaFiles = SourceScanner.findJavaFiles(root);
-            Map<String, Integer> methodFanIn = FunctionFanInComputer.compute(javaFiles)
-                    .entrySet().stream()
-                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (e1, e2) -> e1,
-                            LinkedHashMap::new));
-
-            MetricDbWriter.writeFanIn(methodFanIn, "method");
-
-            ctx.json(toMethodFanInJsonArray(methodFanIn));
-
-            // Persist to Supabase for Grafana
-            MetricDbWriter.writeFanIn(classLevelFanIn);
-
-        } catch (IOException e) {
-            sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
-        }
-    }
-
     /**
-     * New endpoint: accepts a GitHub URL, clones the repo, runs fan-in/fan-out,
-     * persists results to Supabase, and returns a summary.
+     * GET /metrics/analyze?github_link=https://github.com/owner/repo.git
      *
-     * Usage: GET /metrics/analyze?github_link=https://github.com/owner/repo
+     * Clones the given public GitHub repository, runs Fan-Out and Fan-In analysis,
+     * persists results to Supabase, and returns a JSON summary.
      */
     private static void handleAnalyze(Context ctx) {
         String repoUrl = ctx.queryParam("github_link");
@@ -269,7 +177,7 @@ public final class MetricsApiServer {
         if (repoUrl == null || repoUrl.isBlank()) {
             ctx.status(400);
             sendError(ctx, "Required query parameter 'github_link' is missing. " +
-                    "Usage: /metrics/analyze?github_link=https://github.com/owner/repo");
+                    "Usage: /metrics/analyze?github_link=https://github.com/owner/repo.git");
             return;
         }
 
@@ -288,22 +196,12 @@ public final class MetricsApiServer {
             // Step 3 — Compute Fan-Out
             Map<String, Set<String>> outgoing = OutgoingReferenceExtractor.extractOutgoingRefs(javaFiles);
             List<ClassReference> edges = ReferenceAdapters.toEdges(outgoing);
-            Map<String, Integer> fanOut = FanOutComputer.computeFanOut(edges)
-                    .entrySet().stream()
-                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey, Map.Entry::getValue,
-                            (e1, e2) -> e1, LinkedHashMap::new));
+            Map<String, Integer> fanOut = sortDescending(FanOutComputer.computeFanOut(edges));
 
             // Step 4 — Compute Fan-In
             CouplingAnalyzer classAnalyzer = new CouplingAnalyzer(javaFiles);
             classAnalyzer.analyze();
-            Map<String, Integer> fanIn = classAnalyzer.getFanIn()
-                    .entrySet().stream()
-                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey, Map.Entry::getValue,
-                            (e1, e2) -> e1, LinkedHashMap::new));
+            Map<String, Integer> fanIn = sortDescending(classAnalyzer.getFanIn());
 
             // Step 5 — Persist to Supabase for Grafana
             MetricDbWriter.writeFanOut(fanOut);
@@ -326,7 +224,44 @@ public final class MetricsApiServer {
     }
 
     // -------------------------------------------------------------------------
-    // Helpers
+    // Aggregation helpers
+    // -------------------------------------------------------------------------
+
+    private static Map<String, Integer> sortDescending(Map<String, Integer> map) {
+        return map.entrySet().stream()
+                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new));
+    }
+
+    private static Map<String, Integer> aggregateFanOutByPackage(Map<String, Integer> classFanOut) {
+        Map<String, Integer> packageFanOut = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : classFanOut.entrySet()) {
+            String fqcn = entry.getKey();
+            String packageName = fqcn.contains(".")
+                    ? fqcn.substring(0, fqcn.lastIndexOf('.'))
+                    : "(default)";
+            packageFanOut.merge(packageName, entry.getValue(), Integer::sum);
+        }
+        return packageFanOut;
+    }
+
+    private static Map<String, Integer> aggregateFanOutByProject(Map<String, Integer> classFanOut, Path root) {
+        Path fileName = root.getFileName();
+        String name = (fileName != null && !fileName.toString().isBlank())
+                ? fileName.toString()
+                : root.toAbsolutePath().toString();
+        int total = classFanOut.values().stream().mapToInt(Integer::intValue).sum();
+        Map<String, Integer> m = new LinkedHashMap<>();
+        m.put(name, total);
+        return m;
+    }
+
+    // -------------------------------------------------------------------------
+    // Validation helpers
     // -------------------------------------------------------------------------
 
     private static Path validatePath(Context ctx) {
@@ -354,19 +289,27 @@ public final class MetricsApiServer {
         return root;
     }
 
-    private static void sendError(Context ctx, String message) {
-        ctx.status(400);
-        ctx.contentType("application/json");
-        ctx.result("{\"error\":\"" + jsonEscape(message) + "\"}");
+    private static String resolveFanOutScope(Context ctx) {
+        String scopeParam = ctx.queryParam("scope");
+        if (scopeParam == null || scopeParam.isBlank()) {
+            return "class"; // default
+        }
+        String s = scopeParam.trim().toLowerCase();
+        return switch (s) {
+            case "class", "package", "project" -> s;
+            default -> {
+                ctx.status(400);
+                throw new IllegalArgumentException(
+                        "Invalid query parameter 'scope'. Allowed values: class, package, project.");
+            }
+        };
     }
 
     private static Scope validateScope(Context ctx) {
         String scopeParam = ctx.queryParam("scope");
-
         if (scopeParam == null || scopeParam.isBlank()) {
             return Scope.CLASS; // default
         }
-
         try {
             return Scope.valueOf(scopeParam.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -376,15 +319,16 @@ public final class MetricsApiServer {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // JSON serialization helpers
+    // -------------------------------------------------------------------------
+
     private static String toFanOutJsonArray(Map<String, Integer> fanOut) {
         StringBuilder sb = new StringBuilder("[\n");
         int i = 0, n = fanOut.size();
         for (Map.Entry<String, Integer> e : fanOut.entrySet()) {
-            sb.append("  {\"class\":\"")
-                    .append(jsonEscape(e.getKey()))
-                    .append("\",\"fanOut\":")
-                    .append(e.getValue())
-                    .append("}");
+            sb.append("  {\"class\":\"").append(jsonEscape(e.getKey()))
+                    .append("\",\"fanOut\":").append(e.getValue()).append("}");
             if (++i < n)
                 sb.append(",");
             sb.append("\n");
@@ -393,40 +337,53 @@ public final class MetricsApiServer {
         return sb.toString();
     }
 
-    private static String toUnifiedFanInJson(Map<String, Integer> classLevel,
-            Map<String, Integer> methodLevel) {
-        StringBuilder sb = new StringBuilder("{\n");
-
-        sb.append("  \"classLevel\": [\n");
-        int i = 0, n = classLevel.size();
-        for (Map.Entry<String, Integer> e : classLevel.entrySet()) {
-            sb.append("    {\"class\":\"")
-                    .append(jsonEscape(e.getKey()))
-                    .append("\",\"fanIn\":")
-                    .append(e.getValue())
-                    .append("}");
+    private static String toPackageFanOutJsonArray(Map<String, Integer> fanOut) {
+        StringBuilder sb = new StringBuilder("[\n");
+        int i = 0, n = fanOut.size();
+        for (Map.Entry<String, Integer> e : fanOut.entrySet()) {
+            sb.append("  {\"package\":\"").append(jsonEscape(e.getKey()))
+                    .append("\",\"fanOut\":").append(e.getValue()).append("}");
             if (++i < n)
                 sb.append(",");
             sb.append("\n");
         }
-        sb.append("  ],\n");
-
-        sb.append("  \"methodLevel\": [\n");
-        i = 0;
-        n = methodLevel.size();
-        for (Map.Entry<String, Integer> e : methodLevel.entrySet()) {
-            sb.append("    {\"method\":\"")
-                    .append(jsonEscape(e.getKey()))
-                    .append("\",\"fanIn\":")
-                    .append(e.getValue())
-                    .append("}");
-            if (++i < n)
-                sb.append(",");
-            sb.append("\n");
-        }
-        sb.append("  ]\n}");
-
+        sb.append("]");
         return sb.toString();
+    }
+
+    private static String toProjectFanOutJsonArray(Map<String, Integer> fanOut) {
+        StringBuilder sb = new StringBuilder("[\n");
+        int i = 0, n = fanOut.size();
+        for (Map.Entry<String, Integer> e : fanOut.entrySet()) {
+            sb.append("  {\"project\":\"").append(jsonEscape(e.getKey()))
+                    .append("\",\"fanOut\":").append(e.getValue()).append("}");
+            if (++i < n)
+                sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String toFanInJsonArray(Map<String, Integer> fanIn, String labelKey) {
+        StringBuilder sb = new StringBuilder("[\n");
+        int i = 0, n = fanIn.size();
+        for (Map.Entry<String, Integer> e : fanIn.entrySet()) {
+            sb.append("  {\"").append(labelKey).append("\":\"")
+                    .append(jsonEscape(e.getKey()))
+                    .append("\",\"fanIn\":").append(e.getValue()).append("}");
+            if (++i < n)
+                sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static void sendError(Context ctx, String message) {
+        ctx.status(400);
+        ctx.contentType("application/json");
+        ctx.result("{\"error\":\"" + jsonEscape(message) + "\"}");
     }
 
     private static String jsonEscape(String s) {
