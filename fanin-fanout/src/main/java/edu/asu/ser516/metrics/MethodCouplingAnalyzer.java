@@ -13,20 +13,17 @@ import java.util.stream.Collectors;
 
 public class MethodCouplingAnalyzer {
     private final List<Path> sourceFiles;
-    // Map from method fully qualified name to set of called method signatures
     private final Map<String, Set<String>> methodAdjacencyList = new HashMap<>();
     private final Set<String> projectMethods = new HashSet<>();
+    private final Map<String, Set<String>> callLookup = new HashMap<>();
 
     public MethodCouplingAnalyzer(List<Path> sourceFiles) {
         this.sourceFiles = sourceFiles;
     }
 
-    @SuppressWarnings("unchecked") // JavaParser's findAncestor() uses a varargs Class<?>[] parameter that triggers
-                                   // "unchecked generic array creation" — this is a known library API limitation.
+    @SuppressWarnings("unchecked")
     public void analyze() {
         Map<Path, CompilationUnit> parsedUnits = new HashMap<>();
-
-        // Pass 1: Identify all methods defined in the project
         for (Path path : sourceFiles) {
             try {
                 CompilationUnit cu = StaticJavaParser.parse(path);
@@ -37,13 +34,20 @@ public class MethodCouplingAnalyzer {
                         .orElse("");
 
                 cu.findAll(MethodDeclaration.class).forEach(md -> {
-                    Optional<ClassOrInterfaceDeclaration> parentClass = md
-                            .findAncestor(ClassOrInterfaceDeclaration.class);
+                    Optional<ClassOrInterfaceDeclaration> parentClass =
+                            md.findAncestor(ClassOrInterfaceDeclaration.class);
                     if (parentClass.isPresent()) {
                         String className = parentClass.get().getNameAsString();
-                        String fqnClass = packageName.isEmpty() ? className : packageName + "." + className;
-                        String methodSignature = fqnClass + "." + md.getSignature().asString();
-                        projectMethods.add(methodSignature);
+                        String fqnClass = packageName.isEmpty()
+                                ? className
+                                : packageName + "." + className;
+                        String fqnSignature = fqnClass + "." + md.getSignature().asString();
+                        projectMethods.add(fqnSignature);
+                        String lookupKey = md.getNameAsString()
+                                + "(" + md.getParameters().size() + ")";
+                        callLookup
+                                .computeIfAbsent(lookupKey, k -> new HashSet<>())
+                                .add(fqnSignature);
                     }
                 });
             } catch (IOException e) {
@@ -51,7 +55,6 @@ public class MethodCouplingAnalyzer {
             }
         }
 
-        // Pass 2: Calculate Fan-Out for each method
         for (Map.Entry<Path, CompilationUnit> entry : parsedUnits.entrySet()) {
             CompilationUnit cu = entry.getValue();
             String packageName = cu.getPackageDeclaration()
@@ -59,21 +62,28 @@ public class MethodCouplingAnalyzer {
                     .orElse("");
 
             cu.findAll(MethodDeclaration.class).forEach(md -> {
-                Optional<ClassOrInterfaceDeclaration> parentClass = md.findAncestor(ClassOrInterfaceDeclaration.class);
+                Optional<ClassOrInterfaceDeclaration> parentClass =
+                        md.findAncestor(ClassOrInterfaceDeclaration.class);
                 if (parentClass.isPresent()) {
                     String className = parentClass.get().getNameAsString();
-                    String fqnClass = packageName.isEmpty() ? className : packageName + "." + className;
+                    String fqnClass = packageName.isEmpty()
+                            ? className
+                            : packageName + "." + className;
                     String callerSignature = fqnClass + "." + md.getSignature().asString();
 
                     Set<String> dependencies = new HashSet<>();
 
-                    // Without full symbol solving, we extract the method name called and use a
-                    // combination of name and arguments as a footprint
                     md.findAll(MethodCallExpr.class).forEach(call -> {
-                        String calledMethodName = call.getNameAsString();
-                        int argsCount = call.getArguments().size();
-                        String heuristicSignature = calledMethodName + "(" + argsCount + " args)";
-                        dependencies.add(heuristicSignature);
+                        String calledName = call.getNameAsString();
+                        int argCount     = call.getArguments().size();
+                        String lookupKey = calledName + "(" + argCount + ")";
+                        Set<String> matches = callLookup.getOrDefault(lookupKey, Collections.emptySet());
+
+                        for (String match : matches) {
+                            if (!match.equals(callerSignature)) {
+                                dependencies.add(match);
+                            }
+                        }
                     });
 
                     methodAdjacencyList.put(callerSignature, dependencies);
@@ -84,16 +94,16 @@ public class MethodCouplingAnalyzer {
 
     public Map<String, Integer> getFanOut() {
         return methodAdjacencyList.entrySet().stream()
-                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().size()));
     }
 
     public Map<String, Integer> getFanIn() {
         Map<String, Integer> fanIn = new HashMap<>();
         projectMethods.forEach(m -> fanIn.put(m, 0));
-        methodAdjacencyList.values().forEach((Set<String> callees) ->
-                callees.forEach((String callee) -> {
+        methodAdjacencyList.values().forEach(callees ->
+                callees.forEach(callee -> {
                     if (fanIn.containsKey(callee)) {
-                        fanIn.put(callee, fanIn.get(callee) + 1);
+                        fanIn.merge(callee, 1, Integer::sum);
                     }
                 })
         );
