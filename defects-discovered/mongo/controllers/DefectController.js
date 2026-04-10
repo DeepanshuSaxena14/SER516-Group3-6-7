@@ -77,6 +77,60 @@ export const markDefectsFixed = async (req, res) => {
   }
 };
 
+const formatDate = (date) => {
+  return new Date(date).toLocaleString("en-US", {
+    timeZone: "America/Phoenix",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+};
+
+export const getLatestRepoSummary = async (req, res) => {
+  try {
+    const latest = await DefectCount.findOne().sort({ analyzedAt: -1 });
+
+    if (!latest) {
+      return res.status(404).json({ message: "No analysis data found" });
+    }
+
+    const filesAnalyzed = await Defect.distinct("filepath", { repoName: latest.repoName });
+
+    res.status(200).json({
+      repoName: latest.repoName,
+      defectCount: latest.totalCount,
+      filesAnalyzed: filesAnalyzed.length,
+      analyzedAt: formatDate(latest.analyzedAt)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getLatestRepoDefectCounts = async (req, res) => {
+  try {
+    const latest = await DefectCount.findOne().sort({ analyzedAt: -1 });
+
+    if (!latest) {
+      return res.status(404).json({ message: "No analysis data found" });
+    }
+
+    const counts = await DefectCount.find({ repoName: latest.repoName }).sort({ analyzedAt: -1 });
+
+    res.status(200).json(counts.map(c => ({
+      repoName: c.repoName,
+      totalCount: c.totalCount,
+      analyzedAt: formatDate(c.analyzedAt)
+    })));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // creates a new defect
 export const createDefect = async (req, res) => {
   try {
