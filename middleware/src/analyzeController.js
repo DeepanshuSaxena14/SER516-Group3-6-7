@@ -21,9 +21,8 @@ export const analyzeRepo = async (req, res) => {
 
     const [pmdResult, metricsResult] = await Promise.allSettled([
 
-        axios.post(
-            `${G7_PMD_URL}/api/github/clone`,
-            { github_link },
+        axios.get(
+            `${G7_PMD_URL}/api/pmd/analyze?github_link=${github_link}`,
             { timeout: 180000 }
         ),
 
