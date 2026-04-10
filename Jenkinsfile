@@ -91,6 +91,10 @@ pipeline {
             }
             steps {
                 checkout scm
+                dir('defects-discovered/pmd') {
+                    sh 'npm ci'
+                }
+                
                 dir('defects-discovered') {
                     sh 'npm ci'
                     sh 'npm test'

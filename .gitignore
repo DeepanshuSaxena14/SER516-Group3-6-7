@@ -75,6 +75,7 @@ defects-discovered/logs/
 defects-discovered/tmp/
 defects-discovered/temp/
 defects-discovered/pmd/out/
+node_modules/
 
 *.class
 
@@ -96,3 +97,4 @@ hs_err_pid*
 replay_pid*
 
 fanin-fanout/metrics-output/
+node_modules/
