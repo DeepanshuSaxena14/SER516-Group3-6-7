@@ -5,13 +5,13 @@ datasources:
     uid: postgres-metrics
     type: postgres
     access: proxy
-    url: g6-postgres:5432
-    database: metrics
-    user: grafana
+    url: aws-1-us-east-1.pooler.supabase.com:5432
+    database: postgres
+    user: postgres.ouogetytffnkwjdiqjxv
     secureJsonData:
-      password: grafana
+      password: ser516metrics
     jsonData:
-      sslmode: disable
-      postgresVersion: 1600
+      sslmode: require
+      postgresVersion: 15
     isDefault: false
     editable: true
