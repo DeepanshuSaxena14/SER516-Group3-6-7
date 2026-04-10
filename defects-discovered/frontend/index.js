@@ -1,4 +1,5 @@
 import { cloneRepo } from "./services/apis/Github.js";
+import { requestNotificationPermission, sendNotification } from "./services/notifications/NotificationService.js";
 
 const form = document.querySelector(".github-form form");
 const githubLinkInput = document.getElementById("github-link");
@@ -18,6 +19,9 @@ function setLoadingState(isLoading) {
 
 async function handleSubmit(event) {
   event.preventDefault();
+
+  // Request notification permission on user gesture (form submit)
+  await requestNotificationPermission();
 
   const githubLink = githubLinkInput.value.trim();
 
@@ -40,6 +44,9 @@ async function handleSubmit(event) {
     }
 
     console.log("Analysis complete:", result);
+    sendNotification("Analysis Complete", {
+      body: "The repository has been successfully processed. View results in Grafana."
+    });
   } catch (error) {
     console.error("Analysis failed:", error.message);
 
@@ -47,6 +54,10 @@ async function handleSubmit(event) {
     resultLink.href = "#";
     resultLink.textContent = "Analysis failed — check console for details";
     resultPlaceholder.classList.remove("hidden");
+
+    sendNotification("Analysis Failed", {
+      body: "There was an error processing the repository. Check the console for details."
+    });
   } finally {
     setLoadingState(false);
   }
