@@ -4,7 +4,7 @@ datasources:
   - name: Metrics API
     uid: metrics-api
     type: marcusolsson-json-datasource
-    url: http://metrics-service:8080
+    url: http://g6-metrics:8080
     access: proxy
     isDefault: true
     editable: true

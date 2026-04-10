@@ -3,8 +3,15 @@ services:
     build: ./fanin-fanout
     ports:
       - "${G6_METRICS_PORT:-8082}:8080"
+    environment:
+    - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?user=postgres.ouogetytffnkwjdiqjxv&password=ser516metrics&sslmode=require
+    - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
+    - JDBC_PASSWORD=ser516metrics
     volumes:
       - "${INPUT_DIR:-./fanin-fanout/input}:/input"
+    depends_on:
+      g6-postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -25,7 +32,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./fanin-fanout/docker/init-fanout.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./fanin-fanout/docker/init-metrics.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U grafana -d metrics"]
       interval: 5s
@@ -33,6 +40,7 @@ services:
       retries: 5
 
   g6-grafana:
+    profiles: ["local"]
     image: grafana/grafana-oss:11.5.1
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
@@ -59,13 +67,14 @@ services:
       - PORT=4000
       - CLONE_TIMEOUT_MS=60000
       - PMD_TIMEOUT_MS=120000
+      - MONGO_API_URL=http://g7-mongo:4001/api
 
   g7-frontend:
     build: ./defects-discovered/frontend
     ports:
       - "${G7_FRONTEND_PORT:-8081}:80"
     depends_on:
-      - g7-pmd
+      - middlewares
 
   g7-mongo:
     build:
@@ -74,7 +83,7 @@ services:
     ports:
       - "${G7_MONGO_PORT:-4001}:${G7_MONGO_PORT:-4001}"
     environment:
-      - PORT=4001
+      - PORT=${G7_MONGO_PORT:-4001}
       - MONGO_URI=mongodb+srv://sobinsalman_db_user:zhPODvOJyBjtondA@ser516.88mmzgx.mongodb.net/?appName=ser516
 
   g3-ae-metrics:
@@ -84,6 +93,24 @@ services:
     tty: true
     volumes:
       - g3-storage:/app/storage
+    environment:
+      - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+      - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
+      - JDBC_PASSWORD=ser516metrics
+
+  middlewares:
+    build: ./middleware
+    ports:
+      - "${MIDDLEWARE_PORT:-4002}:4002"
+    environment:
+      - PORT=${MIDDLEWARE_PORT:-4002}
+      - G7_PMD_URL=http://g7-pmd:4000
+      - G6_METRICS_URL=http://g6-metrics:8080
+      - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"}]}
+    depends_on:
+      - g7-mongo
+
+
 
 volumes:
   g7-workdata:

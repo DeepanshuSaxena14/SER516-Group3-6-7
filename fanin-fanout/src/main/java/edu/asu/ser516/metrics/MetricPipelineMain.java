@@ -40,10 +40,17 @@ public class MetricPipelineMain {
         List<ClassReference> edges = ReferenceAdapters.toEdges(outgoing);
         Map<String, Integer> fanOut = FanOutComputer.computeFanOut(edges);
 
+        MethodFanInAnalyzer methodFanInAnalyzer = new MethodFanInAnalyzer();
+        Map<String, Integer> methodFanIn = methodFanInAnalyzer.computeFanIn(javaFiles);
+
         List<MetricRow> rows = new ArrayList<>();
         fanOut.forEach((entity, value) ->
                 rows.add(new MetricRow(MetricType.FAN_OUT, Scope.CLASS,
                         entity, value, extractPackage(entity), null)));
+
+        methodFanIn.forEach((entity, value) ->
+                rows.add(new MetricRow(MetricType.FAN_IN, Scope.METHOD,
+                        entity, value, extractPackageFromMethodKey(entity), null)));
 
         CsvMetricExporter  csvExporter  = new CsvMetricExporter();
         JsonMetricExporter jsonExporter = new JsonMetricExporter();
@@ -58,6 +65,18 @@ public class MetricPipelineMain {
     private static String extractPackage(String fqcn) {
         int lastDot = fqcn.lastIndexOf('.');
         return (lastDot > 0) ? fqcn.substring(0, lastDot) : "";
+    }
+
+    private static String extractPackageFromMethodKey(String methodKey) {
+        int parenIndex = methodKey.indexOf('(');
+        String withoutParams = (parenIndex >= 0) ? methodKey.substring(0, parenIndex) : methodKey;
+        int lastDot = withoutParams.lastIndexOf('.');
+        if (lastDot <= 0) {
+            return "";
+        }
+        String classAndPackage = withoutParams.substring(0, lastDot);
+        int classDot = classAndPackage.lastIndexOf('.');
+        return (classDot > 0) ? classAndPackage.substring(0, classDot) : "";
     }
 
     private static String resolveConfig(String envKey, String[] args,

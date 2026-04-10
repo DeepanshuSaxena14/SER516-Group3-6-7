@@ -1,7 +1,6 @@
 package edu.asu.ser516.metrics;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,9 +16,7 @@ public class CsvMetricExporter {
 
         Path outFile = ExportFileManager.prepareOutputFile(
                 outDir,
-                (rows == null || rows.isEmpty())
-                        ? "unknown"
-                        : rows.get(0).getMetricType().name(),
+                "metrics",
                 "csv");
 
         List<String> lines = new ArrayList<>();
@@ -42,12 +39,27 @@ public class CsvMetricExporter {
         Objects.requireNonNull(r, "MetricRow");
 
         return String.join(",",
-                r.getMetricType().name(),
-                r.getScope().name(),
-                r.getEntity(),
-                String.valueOf(r.getValue()),
-                nullToEmpty(r.getPackageName()),
-                nullToEmpty(r.getFilePath()));
+                csvEscape(r.getMetricType().name()),
+                csvEscape(r.getScope().name()),
+                csvEscape(r.getEntity()),
+                csvEscape(String.valueOf(r.getValue())),
+                csvEscape(nullToEmpty(r.getPackageName())),
+                csvEscape(nullToEmpty(r.getFilePath())));
+    }
+
+    private static String csvEscape(String s) {
+        if (s == null) {
+            return "";
+        }
+
+        boolean needsQuotes =
+                s.contains(",") ||
+                s.contains("\"") ||
+                s.contains("\n") ||
+                s.contains("\r");
+
+        String escaped = s.replace("\"", "\"\"");
+        return needsQuotes ? "\"" + escaped + "\"" : escaped;
     }
 
     private static String nullToEmpty(String s) {

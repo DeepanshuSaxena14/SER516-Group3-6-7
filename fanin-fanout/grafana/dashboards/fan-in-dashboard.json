@@ -1,6 +1,19 @@
 {
     "annotations": {
-        "list": []
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
     },
     "description": "Visualizes class-level fan-in metrics for Sprint Review. Fan-in measures how many other classes depend on each class — high values indicate core/utility classes where changes have wide impact.",
     "editable": true,
@@ -10,31 +23,23 @@
     "links": [],
     "panels": [
         {
-            "id": 10,
-            "title": "Highest Fan-In",
-            "description": "Maximum fan-in value across all classes in the latest run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 0,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Maximum fan-in value across all classes in the latest run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "thresholds"
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -49,7 +54,19 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "id": 10,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -57,12 +74,11 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -75,35 +91,29 @@
                     "rawSql": "SELECT MAX(fan_in) AS \"Max Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics);",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Highest Fan-In",
+            "type": "stat"
         },
         {
-            "id": 11,
-            "title": "Average Fan-In",
-            "description": "Average fan-in value across all classes in the latest run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 6,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Average fan-in value across all classes in the latest run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "thresholds"
                     },
                     "decimals": 1,
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -118,7 +128,19 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "id": 11,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -126,12 +148,11 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -144,42 +165,55 @@
                     "rawSql": "SELECT ROUND(AVG(fan_in)::numeric, 1) AS \"Avg Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics);",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Average Fan-In",
+            "type": "stat"
         },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      },
+      "targets": [
         {
-            "id": 12,
-            "title": "Total Classes Analyzed",
-            "description": "Number of classes analyzed in the latest run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 12,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Number of classes analyzed in the latest run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "blue"
+                        "fixedColor": "blue",
+                        "mode": "fixed"
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "blue",
-                                "value": null
+                                "value": 0
                             }
                         ]
                     }
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 0
+            },
+            "id": 12,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -187,12 +221,11 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -205,55 +238,60 @@
                     "rawSql": "SELECT COUNT(*) AS \"Classes\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics);",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Total Classes Analyzed",
+            "type": "stat"
         },
         {
-            "id": 13,
-            "title": "Last Analysis Run",
-            "description": "Timestamp of the most recent fan-in analysis run.",
-            "type": "stat",
-            "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 18,
-                "y": 0
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Timestamp of the most recent fan-in analysis run.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "purple"
+                        "fixedColor": "purple",
+                        "mode": "fixed"
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "purple",
-                                "value": null
+                                "value": 0
                             }
                         ]
                     }
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 0
+            },
+            "id": 13,
             "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
                     ],
-                    "fields": "",
+                    "fields": "/.*/",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "auto",
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto"
+                "wideLayout": true
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -266,23 +304,16 @@
                     "rawSql": "SELECT MAX(recorded_at) AS \"Last Run\"\nFROM fan_in_metrics;",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Last Analysis Run",
+            "type": "stat"
         },
         {
-            "id": 1,
-            "title": "Fan-In per Class (Bar Chart)",
-            "description": "Displays fan-in values for each class from the latest analysis run. Classes are sorted by fan-in descending.",
-            "type": "barchart",
-            "gridPos": {
-                "h": 12,
-                "w": 24,
-                "x": 0,
-                "y": 4
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Displays fan-in values for each class from the latest analysis run. Classes are sorted by fan-in descending.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -291,21 +322,31 @@
                     "custom": {
                         "axisBorderShow": false,
                         "axisCenteredZero": false,
+                        "axisColorMode": "text",
                         "axisLabel": "Fan-In Count",
                         "axisPlacement": "auto",
                         "fillOpacity": 80,
                         "gradientMode": "scheme",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
                         "lineWidth": 1,
                         "scaleDistribution": {
                             "type": "linear"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
                         }
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -320,22 +361,36 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 12,
+                "w": 24,
+                "x": 0,
+                "y": 4
+            },
+            "id": 1,
             "options": {
+                "barRadius": 0,
                 "barWidth": 0.7,
+                "fullHighlight": false,
                 "groupWidth": 0.7,
                 "legend": {
+                    "calcs": [],
                     "displayMode": "list",
-                    "placement": "bottom"
+                    "placement": "bottom",
+                    "showLegend": true
                 },
                 "orientation": "horizontal",
                 "showValue": "always",
                 "stacking": "none",
                 "tooltip": {
+                    "hideZeros": false,
                     "mode": "single",
                     "sort": "none"
                 },
-                "xTickLabelRotation": 0
+                "xTickLabelRotation": 0,
+                "xTickLabelSpacing": 0
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -348,23 +403,16 @@
                     "rawSql": "SELECT class_name AS \"Class\", fan_in AS \"Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\n  AND fan_in >= ${min_fanin}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_in DESC;",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Fan-In per Class (Bar Chart)",
+            "type": "barchart"
         },
         {
-            "id": 2,
-            "title": "Fan-In Metrics Table",
-            "description": "Table view of fan-in values per class from the latest run. Sorted by fan-in descending.",
-            "type": "table",
-            "gridPos": {
-                "h": 10,
-                "w": 12,
-                "x": 0,
-                "y": 16
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Table view of fan-in values per class from the latest run. Sorted by fan-in descending.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -375,14 +423,18 @@
                         "cellOptions": {
                             "type": "auto"
                         },
+                        "footer": {
+                            "reducers": []
+                        },
                         "inspect": false
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "yellow",
@@ -421,12 +473,16 @@
                     }
                 ]
             },
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 0,
+                "y": 16
+            },
+            "id": 2,
             "options": {
-                "showHeader": true,
                 "cellHeight": "sm",
-                "footer": {
-                    "show": false
-                },
+                "showHeader": true,
                 "sortBy": [
                     {
                         "desc": true,
@@ -434,6 +490,7 @@
                     }
                 ]
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -446,46 +503,62 @@
                     "rawSql": "SELECT class_name AS \"Class\", fan_in AS \"Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\n  AND fan_in >= ${min_fanin}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_in DESC;",
                     "refId": "A"
                 }
-            ]
+            ],
+            "title": "Fan-In Metrics Table",
+            "type": "table"
         },
         {
-            "id": 3,
-            "title": "Fan-In Trend Over Time",
-            "description": "Shows how fan-in values change across analysis runs. Each line represents a class.",
-            "type": "timeseries",
-            "gridPos": {
-                "h": 10,
-                "w": 12,
-                "x": 12,
-                "y": 16
-            },
             "datasource": {
-                "type": "postgres",
+                "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
+            "description": "Shows how fan-in values change across analysis runs. Each line represents a class.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "palette-classic"
                     },
                     "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
                         "axisLabel": "Fan-In",
                         "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
                         "drawStyle": "line",
                         "fillOpacity": 10,
                         "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
                         "lineInterpolation": "linear",
                         "lineWidth": 2,
                         "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
                         "showPoints": "auto",
-                        "spanNulls": false
+                        "showValues": false,
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
                     },
+                    "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
                                 "color": "green",
-                                "value": null
+                                "value": 0
                             },
                             {
                                 "color": "red",
@@ -496,16 +569,27 @@
                 },
                 "overrides": []
             },
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 12,
+                "y": 16
+            },
+            "id": 3,
             "options": {
                 "legend": {
+                    "calcs": [],
                     "displayMode": "list",
-                    "placement": "bottom"
+                    "placement": "bottom",
+                    "showLegend": true
                 },
                 "tooltip": {
+                    "hideZeros": false,
                     "mode": "multi",
                     "sort": "desc"
                 }
             },
+            "pluginVersion": "12.3.2",
             "targets": [
                 {
                     "datasource": {
@@ -515,13 +599,34 @@
                     "editorMode": "code",
                     "format": "time_series",
                     "rawQuery": true,
-                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_in\nFROM fan_in_metrics\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
-                    "refId": "A"
+                    "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_in\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\nORDER BY recorded_at;",
+                    "refId": "A",
+                    "sql": {
+                        "columns": [
+                            {
+                                "parameters": [],
+                                "type": "function"
+                            }
+                        ],
+                        "groupBy": [
+                            {
+                                "property": {
+                                    "type": "string"
+                                },
+                                "type": "groupBy"
+                            }
+                        ],
+                        "limit": 50
+                    }
                 }
-            ]
+            ],
+            "title": "Fan-In Trend Over Time",
+            "type": "timeseries"
         }
     ],
-    "schemaVersion": 39,
+    "preload": false,
+    "refresh": "",
+    "schemaVersion": 42,
     "tags": [
         "fan-in",
         "metrics",
@@ -531,12 +636,10 @@
         "list": [
             {
                 "current": {
-                    "selected": false,
                     "text": "0",
                     "value": "0"
                 },
                 "description": "Show only classes with fan-in >= this value. Set to 0 to show all.",
-                "hide": 0,
                 "label": "Min Fan-In",
                 "name": "min_fanin",
                 "options": [
@@ -571,12 +674,10 @@
             },
             {
                 "current": {
-                    "selected": false,
                     "text": "",
                     "value": ""
                 },
                 "description": "Filter classes by name (partial match). Leave empty to show all.",
-                "hide": 0,
                 "label": "Class Filter",
                 "name": "class_filter",
                 "options": [
@@ -589,15 +690,232 @@
                 "query": "",
                 "type": "textbox"
             }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 6
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "barWidth": 0.7,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "postgres-metrics"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT class_name AS \"Class\", fan_in AS \"Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\n  AND fan_in >= ${min_fanin}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_in DESC;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Fan-In Metrics Table",
+      "description": "Table view of fan-in values per class from the latest run. Sorted by fan-in descending.",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "postgres-metrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 6
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Fan-In"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "gauge"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 15
+              }
+            ]
+          }
         ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Fan-In"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "postgres-metrics"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT class_name AS \"Class\", fan_in AS \"Fan-In\"\nFROM fan_in_metrics\nWHERE recorded_at = (SELECT MAX(recorded_at) FROM fan_in_metrics)\n  AND fan_in >= ${min_fanin}\n  AND class_name LIKE '%${class_filter}%'\nORDER BY fan_in DESC;",
+          "refId": "A"
+        }
+      ]
     },
-    "time": {
-        "from": "now-7d",
-        "to": "now"
+    {
+      "id": 7,
+      "title": "Fan-In Trend Over Time",
+      "description": "Shows how fan-in values change across analysis runs. Each line represents a class.",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "postgres-metrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Fan-In",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 6
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "postgres-metrics"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT recorded_at AS \"time\", class_name AS metric, fan_in\nFROM fan_in_metrics\nWHERE $__timeFilter(recorded_at)\nORDER BY recorded_at;",
+          "refId": "A"
+        }
+      ]
     },
-    "timepicker": {},
-    "timezone": "browser",
-    "title": "Fan-In Metrics Dashboard",
-    "uid": "fan-in-metrics",
-    "version": 1
-}
+    
+    { 
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Fan-In Metrics Dashboard",
+      "uid": "fan-in-metrics",
+      "version": 8 
+    }

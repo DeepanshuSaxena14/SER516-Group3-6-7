@@ -23,19 +23,20 @@ public class CouplingAnalyzer {
     public void analyze() {
         // Pass 1: Identify all types defined in the project (fully qualified)
         Map<Path, CompilationUnit> parsedUnits = new HashMap<>();
-        
+
         for (Path path : sourceFiles) {
             try {
                 CompilationUnit cu = StaticJavaParser.parse(path);
                 parsedUnits.put(path, cu);
-                
+
                 String packageName = cu.getPackageDeclaration()
                         .map(pd -> pd.getNameAsString())
                         .orElse("");
-                
+
                 cu.findAll(TypeDeclaration.class).forEach(td -> {
                     if (td.isTopLevelType()) {
-                        String fqn = packageName.isEmpty() ? td.getNameAsString() : packageName + "." + td.getNameAsString();
+                        String fqn = packageName.isEmpty() ? td.getNameAsString()
+                                : packageName + "." + td.getNameAsString();
                         projectClasses.add(fqn);
                     }
                 });
@@ -54,15 +55,17 @@ public class CouplingAnalyzer {
             List<ImportDeclaration> imports = cu.getImports();
 
             cu.findAll(TypeDeclaration.class).forEach(td -> {
-                if (!td.isTopLevelType()) return;
+                if (!td.isTopLevelType())
+                    return;
 
-                String sourceClass = packageName.isEmpty() ? td.getNameAsString() : packageName + "." + td.getNameAsString();
+                String sourceClass = packageName.isEmpty() ? td.getNameAsString()
+                        : packageName + "." + td.getNameAsString();
                 Set<String> dependencies = new HashSet<>();
 
                 td.findAll(ClassOrInterfaceType.class).forEach(type -> {
                     String typeName = type.getNameAsString();
                     String resolved = resolve(typeName, packageName, imports);
-                    
+
                     if (resolved != null && !resolved.equals(sourceClass)) {
                         dependencies.add(resolved);
                     }
@@ -126,5 +129,49 @@ public class CouplingAnalyzer {
             });
         });
         return fanIn;
+    }
+
+    public Map<String, Integer> getPackageFanOut() {
+        Map<String, Integer> classFanOut = getFanOut();
+        Map<String, Integer> packageFanOut = new HashMap<>();
+
+        for (Map.Entry<String, Integer> entry : classFanOut.entrySet()) {
+            String className = entry.getKey();
+            int fanOut = entry.getValue();
+
+            String packageName = className.contains(".") ? className.substring(0, className.lastIndexOf('.'))
+                    : "(default)";
+            packageFanOut.merge(packageName, fanOut, Integer::sum);
+        }
+
+        return packageFanOut;
+    }
+
+    public Map<String, Integer> getPackageFanIn() {
+        Map<String, Integer> classFanIn = getFanIn();
+        Map<String, Integer> packageFanIn = new HashMap<>();
+
+        for (Map.Entry<String, Integer> entry : classFanIn.entrySet()) {
+            String className = entry.getKey();
+            int fanIn = entry.getValue();
+
+            String packageName = className.contains(".")
+                    ? className.substring(0, className.lastIndexOf('.'))
+                    : "(default)";
+
+            packageFanIn.merge(packageName, fanIn, Integer::sum);
+        }
+
+        return packageFanIn;
+    }
+
+    public Map<String, Integer> getProjectFanIn() {
+        int total = getFanIn().values().stream()
+                .mapToInt(Integer::intValue)
+                .sum();
+
+        Map<String, Integer> projectFanIn = new LinkedHashMap<>();
+        projectFanIn.put("project", total);
+        return projectFanIn;
     }
 }

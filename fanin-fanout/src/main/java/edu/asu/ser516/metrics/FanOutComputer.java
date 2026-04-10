@@ -47,4 +47,20 @@ public final class FanOutComputer {
 
         return fanOut;
     }
+
+    /**
+     * Computes the project-level Fan-Out — a single aggregate integer equal to
+     * the sum of all class-level Fan-Out values.
+     *
+     * <p>This is the coarsest scope: it collapses the per-class map down to one
+     * number representing the total coupling weight across the entire project.</p>
+     *
+     * @param rawReferences collection of (sourceClass, targetClass) references
+     * @return sum of all class fan-out values (0 if no external references)
+     */
+    public static int computeProjectFanOut(Collection<ClassReference> rawReferences) {
+        return computeFanOut(rawReferences).values().stream()
+                .mapToInt(Integer::intValue)
+                .sum();
+    }
 }
