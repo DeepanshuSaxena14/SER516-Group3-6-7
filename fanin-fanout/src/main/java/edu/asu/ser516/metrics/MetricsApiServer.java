@@ -165,6 +165,26 @@ public final class MetricsApiServer {
         }
     }
 
+    private static void handleFanInMethods(Context ctx) {
+        Path root;
+        try {
+            root = validatePath(ctx);
+        } catch (IllegalArgumentException e) {
+            sendError(ctx, e.getMessage());
+            return;
+        }
+
+        try {
+            List<Path> javaFiles = SourceScanner.findJavaFiles(root);
+            MethodCouplingAnalyzer methodAnalyzer = new MethodCouplingAnalyzer(javaFiles);
+            methodAnalyzer.analyze();
+            Map<String, Integer> methodFanIn = sortDescending(methodAnalyzer.getFanIn());
+            ctx.json(toFanInJsonArray(methodFanIn, "method"));
+        } catch (IOException e) {
+            sendError(ctx, "Failed to scan project at path: " + root + " — " + e.getMessage());
+        }
+    }
+
     /**
      * GET /metrics/analyze?github_link=https://github.com/owner/repo.git
      *
