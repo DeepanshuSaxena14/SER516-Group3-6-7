@@ -196,10 +196,18 @@ Request body:
 
 ---
 
-### Grafana (Hosted)
-- URL: `https://swent0linux.asu.edu/grafana/`
-- Org: Group-6
-- Dashboards: Fan-Out Metrics, Fan-In Metrics
+#### PMD Endpoints:
+- **Run PMD analysis (Local)**
+  - `POST /api/pmd/run-pmd`
+  - Body: `{ "repoPath": "/app/work/project" }`
+  - Returns `report` results.
+
+- **Clone and Analyze (GitHub)**
+  - `GET /api/pmd/analyze?github_link=URL`
+  - Returns `report` results.
+
+#### Frontend
+- URL: `http://localhost:8081`
 
 > [!NOTE]
 > The hosted Grafana connects to the Supabase cloud PostgreSQL instance.
@@ -232,23 +240,20 @@ Request body:
 
 ### Mongo DB Server (For Focus Factor)
 - URL: `http://localhost:4001`
-
+  
 #### Mongo Endpoints
 - **Defects Summary (Bug Count)**
   - `GET /api/defects/summary`
   - Returns the latest identified bug count.
 
-**Stats (Focus Factor entry)**
+- **Stats (Focus factor entry)**
+  - Get all stats: `GET /api/stat`
+  - Create stat: `POST /api/stat`
+  - Update stat: `PUT /api/stat/:id`
+  - Delete stat: `DELETE /api/stat/:id`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/stat` | Get all stats |
-| POST | `/api/stat` | Create stat |
-| PUT | `/api/stat/:id` | Update stat |
-| DELETE | `/api/stat/:id` | Delete stat |
-
-Example request body for create and update:
-```json
+Example JSON body for Focus Factor create/update:
+```JSON
 {
   "workCapacity": 80,
   "velocity": 45
