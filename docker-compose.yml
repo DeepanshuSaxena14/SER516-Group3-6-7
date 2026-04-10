@@ -9,10 +9,6 @@ services:
     - JDBC_PASSWORD=ser516metrics
     volumes:
       - "${INPUT_DIR:-./fanin-fanout/input}:/input"
-    environment:
-      - JDBC_URL=jdbc:postgresql://g6-postgres:5432/metrics
-      - JDBC_USER=grafana
-      - JDBC_PASSWORD=grafana
     depends_on:
       g6-postgres:
         condition: service_healthy
