@@ -144,7 +144,8 @@ export const getLatestRepoDefectCounts = async (req, res) => {
     res.status(200).json(counts.map(c => ({
       repoName: c.repoName,
       totalCount: c.totalCount,
-      analyzedAt: formatDate(c.analyzedAt)
+      analyzedAt: formatDate(c.analyzedAt),
+      analyzedAtISO: c.analyzedAt
     })));
   } catch (error) {
     res.status(500).json({ error: error.message });
