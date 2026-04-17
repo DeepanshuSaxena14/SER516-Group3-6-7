@@ -54,3 +54,36 @@ export const deletStatbyId = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// SAVE SPRINT VELOCITY
+export const saveSprintVelocity = async (req, res) => {
+  try {
+    const { sprintName, sprintStartDate, sprintEndDate, velocity } = req.body;
+
+    if (!sprintName || !velocity) {
+      return res.status(400).json({ error: "sprintName and velocity are required" });
+    }
+
+    const stat = new StatSchema({
+      sprintName,
+      sprintStartDate: sprintStartDate ? new Date(sprintStartDate) : null,
+      sprintEndDate: sprintEndDate ? new Date(sprintEndDate) : null,
+      velocity,
+    });
+
+    const saved = await stat.save();
+    res.status(201).json(saved);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET ALL SPRINT VELOCITIES
+export const getSprintVelocities = async (req, res) => {
+  try {
+    const velocities = await Stat.find({ sprintName: { $exists: true, $ne: null } }).sort({ sprintStartDate: -1 });
+    res.status(200).json(velocities);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
