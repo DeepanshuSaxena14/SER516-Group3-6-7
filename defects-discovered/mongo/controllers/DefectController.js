@@ -145,6 +145,7 @@ export const getLatestRepoDefectCounts = async (req, res) => {
       repoName: c.repoName,
       totalCount: c.totalCount,
       analyzedAt: formatDate(c.analyzedAt),
+      analyzedAtDate: new Date(c.analyzedAt).toLocaleDateString("en-CA", { timeZone: "America/Phoenix" }),
       analyzedAtISO: c.analyzedAt
     })));
   } catch (error) {
