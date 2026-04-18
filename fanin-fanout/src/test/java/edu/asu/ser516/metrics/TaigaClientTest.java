@@ -135,4 +135,15 @@ class TaigaClientTest {
 
         assertNull(startDate, "Should return null on 404");
     }
+
+    @Test
+    void testGetSprintServerError() throws Exception {
+        mockEndpoint("/api/v1/milestones/10", 500, "Internal Server Error");
+
+        loginObj.setAuthToken("abc123");
+
+        assertThrows(Exception.class,
+                () -> client.getSprintStartDate(loginObj, 10),
+                "Should throw on HTTP 500");
+    }
 }
