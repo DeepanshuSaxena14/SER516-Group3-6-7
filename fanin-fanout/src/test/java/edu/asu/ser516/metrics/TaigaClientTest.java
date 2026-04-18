@@ -55,4 +55,18 @@ class TaigaClientTest {
         assertEquals("abc123", loginObj.getAuthToken());
         assertEquals(42, loginObj.getUserId());
     }
+
+    @Test
+    void testLoginFailureBadCredentials() throws Exception {
+        mockEndpoint("/api/v1/auth", 400, """
+                {"detail": "No active account found with the given credentials",
+                 "code": "invalid_credentials"}
+                """);
+
+        boolean result = client.login(loginObj);
+
+        assertFalse(result, "Login should return false on HTTP 400");
+        assertNull(loginObj.getAuthToken(),
+                "Auth token should remain null after failed login");
+    }
 }
