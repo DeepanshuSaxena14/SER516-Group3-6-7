@@ -110,4 +110,29 @@ class TaigaClientTest {
 
         assertEquals("2024-01-29", endDate);
     }
+
+    @Test
+    void testGetSprintStartDateMissingField() throws Exception {
+        mockEndpoint("/api/v1/milestones/10", 200, """
+                {
+                    "id": 10,
+                    "estimated_finish": "2024-01-29"
+                }
+                """);
+
+        loginObj.setAuthToken("abc123");
+        String startDate = client.getSprintStartDate(loginObj, 10);
+
+        assertNull(startDate, "Should return null when estimated_start is absent");
+    }
+
+    @Test
+    void testGetSprintNotFound() throws Exception {
+        mockEndpoint("/api/v1/milestones/999", 404, "{}");
+
+        loginObj.setAuthToken("abc123");
+        String startDate = client.getSprintStartDate(loginObj, 999);
+
+        assertNull(startDate, "Should return null on 404");
+    }
 }
