@@ -146,4 +146,62 @@ class TaigaClientTest {
                 () -> client.getSprintStartDate(loginObj, 10),
                 "Should throw on HTTP 500");
     }
+    
+    @Test
+    void testGetStoriesForSprintHappyPath() throws Exception {
+        mockEndpoint("/api/v1/userstories", 200, """
+                [
+                    {
+                        "subject": "Story A",
+                        "total_points": 5.0,
+                        "is_closed": true,
+                        "finish_date": "2024-01-17"
+                    },
+                    {
+                        "subject": "Story B",
+                        "total_points": 3.0,
+                        "is_closed": false,
+                        "finish_date": null
+                    }
+                ]
+                """);
+
+        loginObj.setAuthToken("abc123");
+        List<Map<String, Object>> stories =
+                client.getStoriesForSprint(loginObj, 1, 10);
+
+        assertEquals(2, stories.size());
+        assertEquals(5.0,
+                ((Number) stories.get(0).get("total_points")).doubleValue(), 0.01);
+        assertEquals(true, stories.get(0).get("is_closed"));
+        assertEquals(3.0,
+                ((Number) stories.get(1).get("total_points")).doubleValue(), 0.01);
+        assertEquals(false, stories.get(1).get("is_closed"));
+    }
+
+    @Test
+    void testGetStoriesForSprintEmpty() throws Exception {
+        mockEndpoint("/api/v1/userstories", 200, "[]");
+
+        loginObj.setAuthToken("abc123");
+        List<Map<String, Object>> stories =
+                client.getStoriesForSprint(loginObj, 1, 10);
+
+        assertNotNull(stories);
+        assertTrue(stories.isEmpty(),
+                "Empty sprint should return empty list, not null");
+    }
+
+    @Test
+    void testGetStoriesForSprintHttpError() throws Exception {
+        mockEndpoint("/api/v1/userstories", 403, """
+                {"detail": "Authentication credentials were not provided."}
+                """);
+
+        loginObj.setAuthToken("expired-token");
+
+        assertThrows(Exception.class,
+                () -> client.getStoriesForSprint(loginObj, 1, 10),
+                "Should throw on non-200 response");
+    }
 }
