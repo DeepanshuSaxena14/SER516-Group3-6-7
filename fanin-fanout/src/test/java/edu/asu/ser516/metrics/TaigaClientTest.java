@@ -78,4 +78,20 @@ class TaigaClientTest {
 
         assertFalse(result, "Login should return false on HTTP 500");
     }
+
+    @Test
+    void testGetSprintStartDate() throws Exception {
+        mockEndpoint("/api/v1/milestones/10", 200, """
+                {
+                    "id": 10,
+                    "estimated_start": "2024-01-15",
+                    "estimated_finish": "2024-01-29"
+                }
+                """);
+
+        loginObj.setAuthToken("abc123");
+        String startDate = client.getSprintStartDate(loginObj, 10);
+
+        assertEquals("2024-01-15", startDate);
+    }
 }
