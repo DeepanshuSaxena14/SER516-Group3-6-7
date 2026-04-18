@@ -204,4 +204,43 @@ class TaigaClientTest {
                 () -> client.getStoriesForSprint(loginObj, 1, 10),
                 "Should throw on non-200 response");
     }
+
+    @Test
+    void testGetStoriesHandlesNullTotalPoints() throws Exception {
+        mockEndpoint("/api/v1/userstories", 200, """
+                [
+                    {
+                        "subject": "Unestimated story",
+                        "total_points": null,
+                        "is_closed": false
+                    }
+                ]
+                """);
+
+        loginObj.setAuthToken("abc123");
+        List<Map<String, Object>> stories =
+                client.getStoriesForSprint(loginObj, 1, 10);
+        assertEquals(1, stories.size());
+        assertNull(stories.get(0).get("total_points"));
+    }
+
+    @Test
+    void testGetStoriesHandlesPointsAsString() throws Exception {
+        mockEndpoint("/api/v1/userstories", 200, """
+                [
+                    {
+                        "subject": "Story C",
+                        "total_points": "3.5",
+                        "is_closed": true,
+                        "finish_date": "2024-01-18"
+                    }
+                ]
+                """);
+
+        loginObj.setAuthToken("abc123");
+        List<Map<String, Object>> stories =
+                client.getStoriesForSprint(loginObj, 1, 10);
+        assertEquals(1, stories.size());
+        assertEquals("3.5", stories.get(0).get("total_points").toString());
+    }
 }
