@@ -32,4 +32,4 @@ export const getSprint = async (req, res) => {
     } catch (e) {
         return res.status(500).json({ error: e.message });
     }
-};
+};// IC6 Fix - Apr 18
