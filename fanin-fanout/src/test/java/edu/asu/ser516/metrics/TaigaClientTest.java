@@ -94,4 +94,20 @@ class TaigaClientTest {
 
         assertEquals("2024-01-15", startDate);
     }
+
+    @Test
+    void testGetSprintEndDate() throws Exception {
+        mockEndpoint("/api/v1/milestones/10", 200, """
+                {
+                    "id": 10,
+                    "estimated_start": "2024-01-15",
+                    "estimated_finish": "2024-01-29"
+                }
+                """);
+
+        loginObj.setAuthToken("abc123");
+        String endDate = client.getSprintEndDate(loginObj, 10);
+
+        assertEquals("2024-01-29", endDate);
+    }
 }
