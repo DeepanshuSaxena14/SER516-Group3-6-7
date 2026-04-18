@@ -69,4 +69,13 @@ class TaigaClientTest {
         assertNull(loginObj.getAuthToken(),
                 "Auth token should remain null after failed login");
     }
+
+    @Test
+    void testLoginFailureServerError() throws Exception {
+        mockEndpoint("/api/v1/auth", 500, "Internal Server Error");
+
+        boolean result = client.login(loginObj);
+
+        assertFalse(result, "Login should return false on HTTP 500");
+    }
 }
