@@ -1,13 +1,14 @@
 export const getCapacity = async (req, res) => {
     const { projectId } = req.params;
     const token = process.env.TAIGA_BEARER_TOKEN;
+    const apiBaseUrl = process.env.TAIGA_API_BASE_URL || "https://api.taiga.io/";
 
     if (!token) {
         return res.status(500).json({ error: "Missing Taiga auth token (set TAIGA_BEARER_TOKEN)" });
     }
 
     try {
-        const projectStatsRes = await fetch(`https://api.taiga.io/api/v1/projects/${projectId}/stats`, {
+        const projectStatsRes = await fetch(`${apiBaseUrl}/api/v1/projects/${projectId}/stats`, {
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/json",
