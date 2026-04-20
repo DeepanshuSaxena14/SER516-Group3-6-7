@@ -1,0 +1,72 @@
+// Task #161: Scheduled pipeline that runs the PMD defect detector every
+// 12 hours against a fixed repo so Grafana's "defects over time" graph
+// receives fresh data points.
+//
+// The running pmd service (g7-pmd, exposed on port 4000) already has an
+// endpoint that clones the repo, runs PMD, diffs defects against the
+// previous run, and persists a new defect-count record via the mongo
+// service. Grafana reads from that collection, so all this pipeline
+// needs to do is invoke the endpoint on a schedule.
+
+pipeline {
+    agent any
+
+    triggers {
+        // Run every 12 hours. H spreads load so not every pipeline on the
+        // server fires at exactly the same minute.
+        cron('H H/12 * * *')
+    }
+
+    options {
+        timestamps()
+        // A stuck clone/PMD run should not wedge the executor forever.
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+    }
+
+    environment {
+        TARGET_REPO  = 'https://github.com/kmomar1/CSE564-Thermo-CPS'
+        PMD_BASE_URL = "${env.PMD_BASE_URL ?: 'http://g7-pmd:4000'}"
+    }
+
+    stages {
+        stage('Trigger defect analysis') {
+            steps {
+                script {
+                    def encodedRepo = java.net.URLEncoder.encode(env.TARGET_REPO, 'UTF-8')
+                    def url = "${env.PMD_BASE_URL}/api/pmd/analyze?github_link=${encodedRepo}"
+                    echo "Calling defect detector: ${url}"
+
+                    // --fail   : exit non-zero on HTTP >= 400 so the stage fails
+                    // --silent : suppress progress meter
+                    // --show-error: still print errors on failure
+                    // --max-time: hard cap on the full request
+                    def status = sh(
+                        script: """curl --fail --silent --show-error \
+                                       --max-time 900 \
+                                       -o response.json -w '%{http_code}' \
+                                       "${url}" """,
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Analyze endpoint responded with HTTP ${status}"
+                    sh 'head -c 2000 response.json || true'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'response.json',
+                             allowEmptyArchive: true,
+                             fingerprint: false
+        }
+        success {
+            echo "Defect detector run complete for ${env.TARGET_REPO}. Grafana will reflect the new data point on its next refresh."
+        }
+        failure {
+            echo "Defect detector run failed for ${env.TARGET_REPO}. Check that g7-pmd and g7-mongo are reachable from Jenkins."
+        }
+    }
+}
