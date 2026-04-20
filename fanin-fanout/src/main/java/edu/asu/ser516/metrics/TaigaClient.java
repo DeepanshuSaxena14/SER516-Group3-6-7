@@ -15,12 +15,21 @@ import java.util.Map;
  * Thin HTTP client for the Taiga REST API (v1) used by
  * {@link MetricsApiServer#handleTaigaAuc}.
  *
- * <p>Only the subset of endpoints required by the AUC handler is implemented
+ * <p>
+ * Only the subset of endpoints required by the AUC handler is implemented
  * here; everything else lives in the separate TaigaService module.
  */
 public final class TaigaClient {
 
-    private static final String BASE_URL = "https://api.taiga.io/api/v1";
+    private final String baseUrl;
+
+    public TaigaClient() {
+        String url = System.getenv("TAIGA_BASE_URL");
+        if (url == null || url.isBlank()) {
+            throw new IllegalStateException("TAIGA_BASE_URL environment variable is not set.");
+        }
+        this.baseUrl = url;
+    }
 
     private final HttpClient http = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -75,7 +84,8 @@ public final class TaigaClient {
      */
     public String getSprintStartDate(TaigaLoginObject loginObj, int sprintId) throws Exception {
         Map<String, Object> sprint = fetchMilestone(loginObj, sprintId);
-        if (sprint == null) return null;
+        if (sprint == null)
+            return null;
         Object val = sprint.get("estimated_start");
         return val != null ? val.toString() : null;
     }
@@ -87,7 +97,8 @@ public final class TaigaClient {
      */
     public String getSprintEndDate(TaigaLoginObject loginObj, int sprintId) throws Exception {
         Map<String, Object> sprint = fetchMilestone(loginObj, sprintId);
-        if (sprint == null) return null;
+        if (sprint == null)
+            return null;
         Object val = sprint.get("estimated_finish");
         return val != null ? val.toString() : null;
     }
@@ -123,7 +134,8 @@ public final class TaigaClient {
 
         return mapper.readValue(
                 response.body(),
-                new TypeReference<List<Map<String, Object>>>() {});
+                new TypeReference<List<Map<String, Object>>>() {
+                });
     }
 
     // -------------------------------------------------------------------------
@@ -142,7 +154,8 @@ public final class TaigaClient {
                 .build();
 
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() == 404) return null;
+        if (response.statusCode() == 404)
+            return null;
         if (response.statusCode() != 200) {
             throw new Exception("Failed to retrieve sprint " + sprintId
                     + ": HTTP " + response.statusCode());
