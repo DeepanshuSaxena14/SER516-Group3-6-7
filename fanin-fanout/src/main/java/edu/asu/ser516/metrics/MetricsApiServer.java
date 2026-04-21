@@ -53,6 +53,7 @@ public final class MetricsApiServer {
         return Javalin.create(config -> {
             config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
         })
+                .get("/prometheus", MetricsApiServer::handlePrometheus)
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
@@ -63,11 +64,17 @@ public final class MetricsApiServer {
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         create().start(port);
         System.out.println("Metrics API server started on port " + port);
+        System.out.println("Prometheus metrics available at http://localhost:" + port + "/prometheus");
     }
 
     // -------------------------------------------------------------------------
     // Handlers
     // -------------------------------------------------------------------------
+
+    private static void handlePrometheus(Context ctx) {
+        ctx.contentType("text/plain; version=0.0.4; charset=utf-8");
+        ctx.result(PROMETHEUS_REGISTRY.scrape());
+    }
 
     private static void handleFanOut(Context ctx) {
         Path root;
