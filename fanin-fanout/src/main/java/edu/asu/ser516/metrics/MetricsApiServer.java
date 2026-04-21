@@ -2,6 +2,13 @@ package edu.asu.ser516.metrics;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +23,18 @@ import java.util.stream.Collectors;
 public final class MetricsApiServer {
 
     private MetricsApiServer() {
+    }
+
+    private static final PrometheusMeterRegistry PROMETHEUS_REGISTRY = new PrometheusMeterRegistry(
+            PrometheusConfig.DEFAULT);
+
+    static {
+        // Bind standard JVM metrics: memory, GC, threads, CPU, class loading
+        new JvmMemoryMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmGcMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmThreadMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ClassLoaderMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ProcessorMetrics().bindTo(PROMETHEUS_REGISTRY);
     }
 
     // -------------------------------------------------------------------------
