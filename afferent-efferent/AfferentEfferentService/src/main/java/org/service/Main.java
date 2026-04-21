@@ -3,6 +3,7 @@ package org.service;
 import java.util.List;
 import java.util.Scanner;
 
+import org.api.ApiServer;
 import org.github.CloneObject;
 import org.taiga.CruftMetrics;
 import org.taiga.DeliveryMetrics;
@@ -19,7 +20,16 @@ public class Main {
     // githubLoginObject GLO = new githubLoginObject();
     // public int choice = 1;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        if (args.length > 0 && args[0].equals("--server")) {
+            int port = 8080;
+            if (args.length > 1) {
+                port = Integer.parseInt(args[1]);
+            }
+            ApiServer.start(port);
+            Thread.currentThread().join();
+            return;
+        }
         welcomeUser();
 
     }
