@@ -31,7 +31,34 @@ public final class TaigaClient {
         this.baseUrl = url;
     }
 
-    private final HttpClient http = HttpClient.newHttpClient();
+    /** For tests — allows injecting a mock server URL. */
+    public TaigaClient(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    private final HttpClient http;
+
+    {
+        try {
+            javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("TLS");
+            sc.init(null, new javax.net.ssl.TrustManager[] {
+                    new javax.net.ssl.X509TrustManager() {
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) {
+                        }
+
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) {
+                        }
+                    }
+            }, new java.security.SecureRandom());
+            this.http = HttpClient.newBuilder().sslContext(sc).build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create HTTP client", e);
+        }
+    }
     private final ObjectMapper mapper = new ObjectMapper();
 
     // -------------------------------------------------------------------------
@@ -52,7 +79,7 @@ public final class TaigaClient {
                 + "\",\"type\":\"normal\"}";
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/auth"))
+                .uri(URI.create(baseUrl + "/auth"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -119,7 +146,7 @@ public final class TaigaClient {
             TaigaLoginObject loginObj, int projectId, int sprintId) throws Exception {
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL
+                .uri(URI.create(baseUrl
                         + "/userstories?project=" + projectId
                         + "&milestone=" + sprintId))
                 .header("Authorization", "Bearer " + loginObj.getAuthToken())
@@ -148,7 +175,7 @@ public final class TaigaClient {
             throws Exception {
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/milestones/" + sprintId))
+                .uri(URI.create(baseUrl + "/milestones/" + sprintId))
                 .header("Authorization", "Bearer " + loginObj.getAuthToken())
                 .GET()
                 .build();
