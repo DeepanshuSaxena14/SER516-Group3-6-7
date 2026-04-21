@@ -109,7 +109,13 @@ services:
       - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"}]}
     depends_on:
       - g7-mongo
-
+  
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
 
 volumes:
