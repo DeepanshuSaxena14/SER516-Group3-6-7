@@ -21,10 +21,12 @@ class TaigaClientTest {
     void setUp() throws Exception {
         mockServer = HttpServer.create(new InetSocketAddress(0), 0);
         port = mockServer.getAddress().getPort();
-        client = new TaigaClient("http://localhost:" + port);
+        String envUrl = System.getenv("TAIGA_API_URL");
+        client = new TaigaClient(envUrl != null && !envUrl.isBlank() ? envUrl : "http://localhost:" + port);
         loginObj = new TaigaLoginObject("testuser", "testpass");
         mockServer.start();
     }
+
     @AfterEach
     void tearDown() {
         mockServer.stop(0);
@@ -146,7 +148,7 @@ class TaigaClientTest {
                 () -> client.getSprintStartDate(loginObj, 10),
                 "Should throw on HTTP 500");
     }
-    
+
     @Test
     void testGetStoriesForSprintHappyPath() throws Exception {
         mockEndpoint("/api/v1/userstories", 200, """
@@ -167,8 +169,7 @@ class TaigaClientTest {
                 """);
 
         loginObj.setAuthToken("abc123");
-        List<Map<String, Object>> stories =
-                client.getStoriesForSprint(loginObj, 1, 10);
+        List<Map<String, Object>> stories = client.getStoriesForSprint(loginObj, 1, 10);
 
         assertEquals(2, stories.size());
         assertEquals(5.0,
@@ -184,8 +185,7 @@ class TaigaClientTest {
         mockEndpoint("/api/v1/userstories", 200, "[]");
 
         loginObj.setAuthToken("abc123");
-        List<Map<String, Object>> stories =
-                client.getStoriesForSprint(loginObj, 1, 10);
+        List<Map<String, Object>> stories = client.getStoriesForSprint(loginObj, 1, 10);
 
         assertNotNull(stories);
         assertTrue(stories.isEmpty(),
@@ -218,8 +218,7 @@ class TaigaClientTest {
                 """);
 
         loginObj.setAuthToken("abc123");
-        List<Map<String, Object>> stories =
-                client.getStoriesForSprint(loginObj, 1, 10);
+        List<Map<String, Object>> stories = client.getStoriesForSprint(loginObj, 1, 10);
         assertEquals(1, stories.size());
         assertNull(stories.get(0).get("total_points"));
     }
@@ -238,8 +237,7 @@ class TaigaClientTest {
                 """);
 
         loginObj.setAuthToken("abc123");
-        List<Map<String, Object>> stories =
-                client.getStoriesForSprint(loginObj, 1, 10);
+        List<Map<String, Object>> stories = client.getStoriesForSprint(loginObj, 1, 10);
         assertEquals(1, stories.size());
         assertEquals("3.5", stories.get(0).get("total_points").toString());
     }
