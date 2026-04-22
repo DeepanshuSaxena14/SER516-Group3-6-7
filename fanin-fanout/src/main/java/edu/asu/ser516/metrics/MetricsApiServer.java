@@ -2,6 +2,13 @@ package edu.asu.ser516.metrics;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +23,18 @@ import java.util.stream.Collectors;
 public final class MetricsApiServer {
 
     private MetricsApiServer() {
+    }
+
+    private static final PrometheusMeterRegistry PROMETHEUS_REGISTRY = new PrometheusMeterRegistry(
+            PrometheusConfig.DEFAULT);
+
+    static {
+        // Bind standard JVM metrics: memory, GC, threads, CPU, class loading
+        new JvmMemoryMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmGcMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmThreadMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ClassLoaderMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ProcessorMetrics().bindTo(PROMETHEUS_REGISTRY);
     }
 
     // -------------------------------------------------------------------------
@@ -34,6 +53,7 @@ public final class MetricsApiServer {
         return Javalin.create(config -> {
             config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
         })
+                .get("/prometheus", MetricsApiServer::handlePrometheus)
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
@@ -44,11 +64,17 @@ public final class MetricsApiServer {
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         create().start(port);
         System.out.println("Metrics API server started on port " + port);
+        System.out.println("Prometheus metrics available at http://localhost:" + port + "/prometheus");
     }
 
     // -------------------------------------------------------------------------
     // Handlers
     // -------------------------------------------------------------------------
+
+    private static void handlePrometheus(Context ctx) {
+        ctx.contentType("text/plain; version=0.0.4; charset=utf-8");
+        ctx.result(PROMETHEUS_REGISTRY.scrape());
+    }
 
     private static void handleFanOut(Context ctx) {
         Path root;
