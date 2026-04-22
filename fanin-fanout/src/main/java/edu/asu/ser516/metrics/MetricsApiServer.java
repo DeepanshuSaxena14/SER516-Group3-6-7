@@ -38,7 +38,9 @@ public final class MetricsApiServer {
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
-                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc);
+                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
+                .get("/taiga/stories", MetricsApiServer::handleTaigaStories)
+                .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint);
     }
 
     public static void main(String[] args) {
@@ -258,7 +260,7 @@ public final class MetricsApiServer {
     private static void handleTaigaAuc(Context ctx) {
         // --- 1. Validate query parameters ---
         String projectIdParam = ctx.queryParam("project_id");
-        String sprintIdParam  = ctx.queryParam("sprint_id");
+        String sprintIdParam = ctx.queryParam("sprint_id");
 
         int projectId, sprintId;
         try {
@@ -301,7 +303,7 @@ public final class MetricsApiServer {
 
             // --- 4. Fetch sprint date window ---
             String sprintStart = taiga.getSprintStartDate(loginObj, sprintId);
-            String sprintEnd   = taiga.getSprintEndDate(loginObj, sprintId);
+            String sprintEnd = taiga.getSprintEndDate(loginObj, sprintId);
 
             if (sprintStart == null || sprintStart.isBlank()) {
                 ctx.status(422);
@@ -315,8 +317,8 @@ public final class MetricsApiServer {
             }
 
             // --- 5. Fetch stories for the sprint ---
-            java.util.List<java.util.Map<String, Object>> stories =
-                    taiga.getStoriesForSprint(loginObj, projectId, sprintId);
+            java.util.List<java.util.Map<String, Object>> stories = taiga.getStoriesForSprint(loginObj, projectId,
+                    sprintId);
 
             // --- 6. Compute AUC ---
             AucService.AucResult auc = AucService.compute(stories, sprintStart, sprintEnd);
@@ -324,18 +326,101 @@ public final class MetricsApiServer {
             // --- 7. Return JSON response ---
             ctx.contentType("application/json");
             ctx.result("{"
-                    + "\"projectId\":"  + projectId                          + ","
-                    + "\"sprintId\":"   + sprintId                           + ","
-                    + "\"sprintStart\":\"" + jsonEscape(sprintStart)         + "\","
-                    + "\"sprintEnd\":\""   + jsonEscape(sprintEnd)           + "\","
-                    + "\"aucWork\":"    + auc.aucWork()                      + ","
-                    + "\"aucValue\":"   + auc.aucValue()                     + ","
-                    + "\"aucRatio\":"   + auc.aucRatio()
+                    + "\"projectId\":" + projectId + ","
+                    + "\"sprintId\":" + sprintId + ","
+                    + "\"sprintStart\":\"" + jsonEscape(sprintStart) + "\","
+                    + "\"sprintEnd\":\"" + jsonEscape(sprintEnd) + "\","
+                    + "\"aucWork\":" + auc.aucWork() + ","
+                    + "\"aucValue\":" + auc.aucValue() + ","
+                    + "\"aucRatio\":" + auc.aucRatio()
                     + "}");
 
         } catch (Exception e) {
             ctx.status(500);
             sendError(ctx, "Taiga AUC computation failed: " + e.getMessage());
+        }
+    }
+
+    private static void handleTaigaStories(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+        String sprintIdParam = ctx.queryParam("sprint_id");
+
+        if (projectIdParam == null || projectIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Required query parameter 'project_id' is missing.");
+            return;
+        }
+        if (sprintIdParam == null || sprintIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Required query parameter 'sprint_id' is missing.");
+            return;
+        }
+
+        int projectId, sprintId;
+        try {
+            projectId = Integer.parseInt(projectIdParam.trim());
+            sprintId = Integer.parseInt(sprintIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "project_id and sprint_id must be integers.");
+            return;
+        }
+
+        TaigaLoginObject login = TaigaLoginObject.fromEnv();
+        TaigaClient taiga = new TaigaClient();
+
+        try {
+            if (!taiga.login(login)) {
+                ctx.status(401);
+                sendError(ctx, "Taiga authentication failed.");
+                return;
+            }
+            java.util.List<java.util.Map<String, Object>> stories = taiga.getStoriesForSprint(login, projectId,
+                    sprintId);
+            ctx.contentType("application/json");
+            ctx.result(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(stories));
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to fetch stories: " + e.getMessage());
+        }
+    }
+
+    private static void handleTaigaSprint(Context ctx) {
+        String sprintIdParam = ctx.queryParam("sprint_id");
+
+        if (sprintIdParam == null || sprintIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Required query parameter 'sprint_id' is missing.");
+            return;
+        }
+
+        int sprintId;
+        try {
+            sprintId = Integer.parseInt(sprintIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "sprint_id must be an integer.");
+            return;
+        }
+
+        TaigaLoginObject login = TaigaLoginObject.fromEnv();
+        TaigaClient taiga = new TaigaClient();
+
+        try {
+            if (!taiga.login(login)) {
+                ctx.status(401);
+                sendError(ctx, "Taiga authentication failed.");
+                return;
+            }
+            String start = taiga.getSprintStartDate(login, sprintId);
+            String end = taiga.getSprintEndDate(login, sprintId);
+            ctx.contentType("application/json");
+            ctx.result(String.format(
+                    "{\"sprintId\":%d,\"sprintStart\":\"%s\",\"sprintEnd\":\"%s\"}",
+                    sprintId, start, end));
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to fetch sprint: " + e.getMessage());
         }
     }
 
