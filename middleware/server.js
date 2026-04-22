@@ -45,6 +45,7 @@ export const createApp = () => {
       message: "Middleware server running",
       port: PORT,
       routes: [
+        { route: "/prometheus", description: "GET — Prometheus metrics scrape endpoint" },
         { route: "/analyze", description: "POST — orchestrates all metric services" },
         ...serviceConfig.routes.map(({ route, api }) => ({ route, api })),
       ],
@@ -65,6 +66,7 @@ export const startServer = () => {
 
   return app.listen(PORT, () => {
     console.log(`Middleware running on port ${PORT}`);
+    console.log(`Prometheus metrics available at http://localhost:${PORT}/prometheus`);
   });
 };
 
