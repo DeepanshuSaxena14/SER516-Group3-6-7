@@ -22,7 +22,7 @@ class TaigaClientTest {
         mockServer = HttpServer.create(new InetSocketAddress(0), 0);
         port = mockServer.getAddress().getPort();
         String envUrl = System.getenv("TAIGA_API_URL");
-        client = new TaigaClient(envUrl != null && !envUrl.isBlank() ? envUrl : "http://localhost:" + port);
+        client = new TaigaClient(envUrl != null && !envUrl.isBlank() ? envUrl : "http://localhost:" + port + "/api/v1");
         loginObj = new TaigaLoginObject("testuser", "testpass");
         mockServer.start();
     }
