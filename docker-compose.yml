@@ -121,6 +121,16 @@ services:
       - middlewares
       - g7-pmd
 
+  metrics-writer:
+    build: ./prometheus/metrics-writer
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - WRITE_INTERVAL_MS=15000
+      - SUPABASE_DB_URL=postgresql://postgres.ouogetytffnkwjdiqjxv:ser516metrics@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 
 volumes:
   g7-workdata:
