@@ -33,15 +33,15 @@ async function handleSubmit(event) {
   try {
     const result = await cloneRepo(githubLink);
 
+    if (!result || result.message?.toLowerCase().includes("failed")) {
+      throw new Error(result?.message || "Analysis failed");
+    }
+
     const resultLink = resultPlaceholder.querySelector(".result-link");
     resultLink.href = GRAFANA_URL;
     resultLink.textContent = "View Dashboards on Grafana →";
     resultLink.target = "_blank";
     resultPlaceholder.classList.remove("hidden");
-
-    if (result.errors && result.errors.length > 0) {
-      console.warn("Some services reported errors:", result.errors);
-    }
 
     console.log("Analysis complete:", result);
     sendNotification("Analysis Complete", {
