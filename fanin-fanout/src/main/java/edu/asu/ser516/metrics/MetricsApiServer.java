@@ -37,7 +37,8 @@ public final class MetricsApiServer {
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
-                .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods);
+                .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
+                .get("/metrics/taiga/sprint", MetricsApiServer::handleTaigaSprint);
     }
 
     public static void main(String[] args) {
@@ -49,6 +50,43 @@ public final class MetricsApiServer {
     // -------------------------------------------------------------------------
     // Handlers
     // -------------------------------------------------------------------------
+
+    private static void handleTaigaSprint(Context ctx) {
+        String username = ctx.queryParam("username");
+        String password = ctx.queryParam("password");
+        String projectIdParam = ctx.queryParam("projectId");
+        String sprintIdParam = ctx.queryParam("sprintId");
+
+        if (username == null || password == null || projectIdParam == null || sprintIdParam == null) {
+            sendError(ctx, "Required params: username, password, projectId, sprintId");
+            return;
+        }
+
+        try {
+            TaigaClient taiga = new TaigaClient();
+            String token = taiga.login(username, password);
+            int projectId = Integer.parseInt(projectIdParam);
+            int sprintId = Integer.parseInt(sprintIdParam);
+            List<SprintUserStory> stories = taiga.getUserStoriesForSprint(token, projectId, sprintId);
+
+            StringBuilder sb = new StringBuilder("[\n");
+            for (int i = 0; i < stories.size(); i++) {
+                SprintUserStory s = stories.get(i);
+                sb.append("  {")
+                        .append("\"totalPoints\":").append(s.totalPoints()).append(",")
+                        .append("\"businessValue\":").append(s.businessValue()).append(",")
+                        .append("\"finishDate\":").append(s.finishDate() == null ? "null" : "\"" + s.finishDate() + "\"")
+                        .append("}");
+                if (i < stories.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append("]");
+            ctx.json(sb.toString());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, e.getMessage());
+        }
+    }
 
     private static void handleFanOut(Context ctx) {
         Path root;
