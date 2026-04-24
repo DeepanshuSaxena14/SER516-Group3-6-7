@@ -3,11 +3,12 @@ import StatSchema from "../models/StatModel.js";
 
 export const createFocusFactor = async (req, res) => {
   try {
-    const { velocity, workCapacity } = req.body;
+    const { velocity, workCapacity, boardNumber } = req.body;
 
     const stat = new StatSchema({
       velocity,
       workCapacity,
+      boardNumber
     });
 
     const saved = await stat.save();
