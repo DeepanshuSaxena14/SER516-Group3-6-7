@@ -86,6 +86,19 @@ services:
       - PORT=${G7_MONGO_PORT:-4001}
       - MONGO_URI=mongodb+srv://sobinsalman_db_user:zhPODvOJyBjtondA@ser516.88mmzgx.mongodb.net/?appName=ser516
 
+  g7-focus-factor:
+    build: ./defects-discovered/focus-factor
+    ports:
+      - "${G7_FOCUS_FACTOR_PORT:-4002}:4002"
+    environment:
+      - FOCUS_FACTOR_PORT=4002
+    healthcheck:                    
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   g3-ae-metrics:
     build: ./afferent-efferent/AfferentEfferentService
     profiles: ["manual"]
