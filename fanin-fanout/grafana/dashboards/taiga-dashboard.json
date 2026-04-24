@@ -235,13 +235,13 @@
                 "type": "grafana-postgresql-datasource",
                 "uid": "postgres-metrics"
             },
-            "description": "Total business value from the most recent sprint (AUC metric).",
+            "description": "Latest computed AUC metric for business value from the most recent sprint.",
             "fieldConfig": {
                 "defaults": {
                     "color": {
                         "mode": "thresholds"
                     },
-                    "decimals": 0,
+                    "decimals": 2,
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
@@ -295,11 +295,155 @@
                     "editorMode": "code",
                     "format": "table",
                     "rawQuery": true,
-                    "rawSql": "SELECT business_value AS \"Business Value\"\nFROM \"AUC\"\nORDER BY created_at DESC\nLIMIT 1;",
+                    "rawSql": "SELECT auc_value AS \"AUC (Value)\"\nFROM \"AUC\"\nORDER BY created_at DESC\nLIMIT 1;",
                     "refId": "A"
                 }
             ],
-            "title": "Latest Business Value (AUC)",
+            "title": "Latest AUC (Value)",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "postgres-metrics"
+            },
+            "description": "Latest computed AUC metric for story points (work) from the most recent sprint.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": 0
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 5
+                            },
+                            {
+                                "color": "green",
+                                "value": 13
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 8,
+                "x": 8,
+                "y": 4
+            },
+            "id": 5,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "wideLayout": true
+            },
+            "pluginVersion": "12.3.2",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT auc_work AS \"AUC (Work)\"\nFROM \"AUC\"\nORDER BY created_at DESC\nLIMIT 1;",
+                    "refId": "A"
+                }
+            ],
+            "title": "Latest AUC (Work)",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "postgres-metrics"
+            },
+            "description": "Latest AUC Ratio (Value / Work) from the most recent sprint.",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": 0
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.8
+                            },
+                            {
+                                "color": "green",
+                                "value": 1.2
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 8,
+                "x": 16,
+                "y": 4
+            },
+            "id": 6,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto",
+                "wideLayout": true
+            },
+            "pluginVersion": "12.3.2",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "postgres-metrics"
+                    },
+                    "editorMode": "code",
+                    "format": "table",
+                    "rawQuery": true,
+                    "rawSql": "SELECT auc_ratio AS \"AUC Ratio\"\nFROM \"AUC\"\nORDER BY created_at DESC\nLIMIT 1;",
+                    "refId": "A"
+                }
+            ],
+            "title": "Latest AUC Ratio",
             "type": "stat"
         },
         {
@@ -348,9 +492,9 @@
                 "h": 10,
                 "w": 12,
                 "x": 0,
-                "y": 4
+                "y": 8
             },
-            "id": 5,
+            "id": 7,
             "options": {
                 "legend": {
                     "calcs": [
@@ -426,9 +570,9 @@
                 "h": 10,
                 "w": 12,
                 "x": 12,
-                "y": 4
+                "y": 8
             },
-            "id": 6,
+            "id": 8,
             "options": {
                 "legend": {
                     "calcs": [
@@ -543,9 +687,9 @@
                 "h": 10,
                 "w": 24,
                 "x": 0,
-                "y": 14
+                "y": 18
             },
-            "id": 7,
+            "id": 9,
             "options": {
                 "cellHeight": "sm",
                 "showHeader": true,
