@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createServiceProxy } from "./src/createServiceProxy.js";
 import { loadServiceConfig } from "./src/loadServiceConfig.js";
 import { analyzeRepo } from "./src/analyzeController.js";
+import { getStories, getSprint } from "./src/taigaController.js";
 
 const PORT = Number(process.env.PORT) || 4002;
 
@@ -16,6 +17,8 @@ export const createApp = () => {
   app.use(express.urlencoded({ extended: true }));
 
   app.post("/analyze", analyzeRepo);
+  app.get("/taiga/stories", getStories);
+  app.get("/taiga/sprint", getSprint);
 
   app.get("/health", (req, res) => {
     res.json({
