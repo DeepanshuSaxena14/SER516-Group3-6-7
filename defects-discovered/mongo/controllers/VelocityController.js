@@ -1,12 +1,7 @@
-import Stat from "../models/StatModel.js";
-
-export const calculateAndSaveSprintVelocities = async (req, res) => {
-  const { projectId } = req.body;
+export const getVelocities = async (req, res) => {
+  const { projectId } = req.params;
   const token = process.env.TAIGA_BEARER_TOKEN;
-
-  if (!projectId) {
-    return res.status(400).json({ error: "projectId is required" });
-  }
+  const apiBaseUrl = process.env.TAIGA_API_BASE_URL || "https://api.taiga.io";
 
   if (!token) {
     return res.status(500).json({ error: "Missing Taiga auth token (set TAIGA_BEARER_TOKEN)" });
@@ -14,7 +9,7 @@ export const calculateAndSaveSprintVelocities = async (req, res) => {
 
   try {
     // Fetch all sprints
-    const sprintsRes = await fetch(`https://api.taiga.io/api/v1/milestones?project=${projectId}`, {
+    const sprintsRes = await fetch(`${apiBaseUrl}/api/v1/milestones?project=${projectId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
@@ -30,13 +25,13 @@ export const calculateAndSaveSprintVelocities = async (req, res) => {
     }
 
     const sprints = await sprintsRes.json();
-    const savedVelocities = [];
+    const velocities = [];
 
     // For each sprint, fetch user stories and calculate velocity
     for (const sprint of sprints) {
       try {
         const storiesRes = await fetch(
-          `https://api.taiga.io/api/v1/userstories?project=${projectId}&milestone=${sprint.id}`,
+          `${apiBaseUrl}/api/v1/userstories?project=${projectId}&milestone=${sprint.id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -54,24 +49,21 @@ export const calculateAndSaveSprintVelocities = async (req, res) => {
           .filter((story) => story.status_extra_info?.name?.toLowerCase() === "accepted")
           .reduce((sum, story) => sum + (story.estimated_points || 0), 0);
 
-        // Save to MongoDB
-        const stat = new Stat({
+        velocities.push({
           sprintName: sprint.name,
-          sprintStartDate: sprint.created_date ? new Date(sprint.created_date) : null,
-          sprintEndDate: sprint.estimated_finish ? new Date(sprint.estimated_finish) : null,
+          sprintId: sprint.id,
+          sprintStart: sprint.estimated_start,
+          sprintEnd: sprint.estimated_finish,
           velocity,
         });
-
-        const saved = await stat.save();
-        savedVelocities.push(saved);
       } catch (sprintError) {
         console.error(`Error processing sprint ${sprint.name}:`, sprintError.message);
       }
     }
 
     res.status(200).json({
-      message: `Calculated and saved velocities for ${savedVelocities.length} sprints`,
-      velocities: savedVelocities,
+      projectId,
+      velocities,
     });
   } catch (err) {
     return res.status(502).json({
