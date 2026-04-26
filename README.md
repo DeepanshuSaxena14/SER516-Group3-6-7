@@ -77,3 +77,4 @@ We have automation pipelines set to update Grafana, run available static analysi
 
 ---
 ## Sprint 4 Updates
+# Sprint 4 Final Release
