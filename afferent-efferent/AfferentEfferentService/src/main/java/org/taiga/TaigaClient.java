@@ -3,10 +3,14 @@ package org.taiga;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.cert.X509Certificate;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,9 +21,23 @@ import java.util.Set;
 // this class handles all the calls to the taiga API
 public class TaigaClient {
 
-    private static final String BASE_URL = "https://api.taiga.io/api/v1";
+    private static final String BASE_URL = "https://swent0linux.asu.edu/taiga/api/v1";
 
-    private final HttpClient client = HttpClient.newHttpClient();
+    private final HttpClient client = buildClient();
+
+    private static HttpClient buildClient() {
+        try {
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+            }}, null);
+            return HttpClient.newBuilder().sslContext(sslContext).build();
+        } catch (Exception e) {
+            return HttpClient.newHttpClient();
+        }
+    }
 
     // logs in and stores the auth token + user id in the login object
     public boolean login(TaigaLoginObject loginObj) throws Exception {
@@ -160,7 +178,8 @@ public class TaigaClient {
         for (int i = 0; i < sprints.length(); i++) {
             JSONObject sprint = sprints.getJSONObject(i);
             String name = sprint.getString("name");
-            if (!sprint.has("estimated_finish") || sprint.isNull("estimated_finish")) continue;
+            if (!sprint.has("estimated_finish") || sprint.isNull("estimated_finish"))
+                continue;
             String endDateStr = sprint.getString("estimated_finish");
             LocalDate endDate;
             try {
@@ -235,7 +254,8 @@ public class TaigaClient {
             JSONObject taskJson = tasksJson.getJSONObject(i);
 
             // user_story can be null if the task isn't assigned to a story
-            if (taskJson.isNull("user_story")) continue;
+            if (taskJson.isNull("user_story"))
+                continue;
 
             int usId = taskJson.getInt("user_story");
             if (!tasksByStory.containsKey(usId)) {
@@ -255,7 +275,8 @@ public class TaigaClient {
         for (int i = 0; i < userStoriesJson.length(); i++) {
             JSONObject usJson = userStoriesJson.getJSONObject(i);
 
-            if (usJson.isNull("milestone")) continue;
+            if (usJson.isNull("milestone"))
+                continue;
 
             int sprintId = usJson.getInt("milestone");
             if (!storiesBySprint.containsKey(sprintId)) {
@@ -336,38 +357,46 @@ public class TaigaClient {
     }
 
     private boolean isCruft(JSONObject story) {
-        // tags that signal zero value or technical debt work
         Set<String> CRUFT_TAGS = Set.of(
                 "bug", "tech-debt", "technical-debt", "tech_debt", "technical_debt",
                 "refactor", "refactoring", "infrastructure", "infra",
-                "chore", "maintenance", "cleanup", "debt", "fix"
-        );
+                "chore", "maintenance", "cleanup", "debt", "fix");
 
-        // tag based detection
-        // taiga stores tags as an array of [name, color] pairs
+        // tag-based detection
         if (story.has("tags") && !story.isNull("tags")) {
             JSONArray tags = story.getJSONArray("tags");
             for (int i = 0; i < tags.length(); i++) {
                 Object tagEntry = tags.get(i);
                 String tagName = "";
+
                 if (tagEntry instanceof JSONArray) {
                     tagName = ((JSONArray) tagEntry).optString(0, "").toLowerCase().trim();
                 } else if (tagEntry instanceof String) {
                     tagName = ((String) tagEntry).toLowerCase().trim();
                 }
+
                 if (CRUFT_TAGS.contains(tagName)) {
                     return true;
                 }
             }
         }
 
-        // point based detection (zero or unestimated = no business value)
+        // point-based detection
         if (!story.has("total_points") || story.isNull("total_points")) {
             return true;
         }
+
         double points = story.optDouble("total_points", -1);
-        if (points == 0.0) {
+        if (points <= 0.0) {
             return true;
+        }
+
+        // optional subject-based detection
+        String subject = story.optString("subject", "").toLowerCase();
+        for (String keyword : CRUFT_TAGS) {
+            if (subject.contains(keyword)) {
+                return true;
+            }
         }
 
         return false;
@@ -376,8 +405,10 @@ public class TaigaClient {
     private String extractString(String json, String key) {
         String search = "\"" + key + "\":";
         int start = json.indexOf(search) + search.length();
-        while (start < json.length() && json.charAt(start) == ' ') start++;
-        if (start < json.length() && json.charAt(start) == '"') start++;
+        while (start < json.length() && json.charAt(start) == ' ')
+            start++;
+        if (start < json.length() && json.charAt(start) == '"')
+            start++;
         int end = json.indexOf("\"", start);
         return json.substring(start, end);
     }
@@ -386,7 +417,8 @@ public class TaigaClient {
         String search = "\"" + key + "\":";
         int start = json.indexOf(search) + search.length();
         int end = json.indexOf(",", start);
-        if (end == -1) end = json.indexOf("}", start);
+        if (end == -1)
+            end = json.indexOf("}", start);
         return Integer.parseInt(json.substring(start, end).trim());
     }
 }
