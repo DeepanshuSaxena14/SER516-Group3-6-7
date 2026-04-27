@@ -190,4 +190,32 @@ public final class TaigaClient {
 
         return mapper.readValue(response.body(), Map.class);
     }
+
+    // fetch project Capacity
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchProjectCapacity(TaigaLoginObject loginObj, int projectId)
+            throws Exception {
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/projects/" + projectId + "/stats"))
+                .header("Authorization", "Bearer " + loginObj.getAuthToken())
+                .GET()
+                .build();
+
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 404)
+            return null;
+        if (response.statusCode() != 200) {
+            throw new Exception("Failed to retrieve project capacity " + projectId
+                    + ": HTTP " + response.statusCode());
+        }
+
+        Map<String, Object> json = mapper.readValue(response.body(), Map.class);
+        Object assigned = json.get("assigned_points");
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("assigned_points", assigned);
+        return out;
+    }
+
+
 }
