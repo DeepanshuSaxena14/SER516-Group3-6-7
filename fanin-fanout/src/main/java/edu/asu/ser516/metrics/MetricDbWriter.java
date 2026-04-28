@@ -67,6 +67,31 @@ public final class MetricDbWriter {
         }
     }
 
+    public static void writeProjectCapacity(Map<String, Object> capacity) {
+        String url = System.getenv("JDBC_URL");
+        if (url == null || url.isBlank()) return;
+
+        if (capacity == null || capacity.isEmpty()) return;
+
+        String sql = "INSERT INTO capacity (capacity) VALUES (?)";
+        
+        try (Connection conn = getConnection(url);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            for (Map.Entry<String, Object> e : capacity.entrySet()) {
+                ps.setObject(1, e.getValue());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            System.out.println("Wrote " + capacity.size() + " capacity rows to database.");
+
+        } catch (Exception ex) {
+            System.err.println("DB write failed (capacity): " + ex.getMessage());
+        }
+    }
+
+
+
     private static Connection getConnection(String url) throws Exception {
         String user     = System.getenv("JDBC_USER");
         String password = System.getenv("JDBC_PASSWORD");
