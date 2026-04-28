@@ -453,7 +453,7 @@ public final class MetricsApiServer {
                 return;
             }
             Map<String, Object> capacity = taiga.fetchProjectCapacity(login, projectId);
-            MetricDbWriter.writeProjectCapacity(capacity);
+            MetricDbWriter.writeProjectCapacity(capacity, projectId);
             ctx.contentType("application/json");
             ctx.result(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(capacity));
         } catch (Exception e) {
