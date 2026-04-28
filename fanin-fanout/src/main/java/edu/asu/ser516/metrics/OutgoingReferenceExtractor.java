@@ -1,6 +1,7 @@
 package edu.asu.ser516.metrics;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
@@ -36,7 +37,9 @@ public final class OutgoingReferenceExtractor {
     }
     public static Map<String, Set<String>> extractOutgoingRefs(List<Path> javaFiles, Set<String> projectClasses) {
         Map<String, Set<String>> outgoing = new HashMap<>();
-        JavaParser parser = new JavaParser();
+        ParserConfiguration config = new ParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE);
+        JavaParser parser = new JavaParser(config);
         for (Path file : javaFiles) {
             CompilationUnit cu;
             try {

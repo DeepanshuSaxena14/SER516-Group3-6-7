@@ -25,8 +25,8 @@ public final class MetricsApiServer {
     private MetricsApiServer() {
     }
 
-    private static final String TAIGA_SERVICE_URL =
-            System.getenv().getOrDefault("TAIGA_SERVICE_URL", "http://taiga-service:8080");
+    private static final String TAIGA_SERVICE_URL = System.getenv().getOrDefault("TAIGA_SERVICE_URL",
+            "http://taiga-service:8080");
 
     private static final HttpClient HTTP = HttpClient.newHttpClient();
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -51,7 +51,10 @@ public final class MetricsApiServer {
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
-                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc);
+                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
+                .get("/taiga/stories", MetricsApiServer::handleTaigaStories)
+                .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint)
+                .get("/health", ctx -> ctx.result("OK"));
     }
 
     public static void main(String[] args) {
@@ -303,7 +306,8 @@ public final class MetricsApiServer {
                 sendError(ctx, "taiga-service sprint fetch failed: " + sprintResp.body());
                 return;
             }
-            Map<String, Object> sprintData = MAPPER.readValue(sprintResp.body(), new TypeReference<>() {});
+            Map<String, Object> sprintData = MAPPER.readValue(sprintResp.body(), new TypeReference<>() {
+            });
             String sprintStart = (String) sprintData.get("sprintStart");
             String sprintEnd = (String) sprintData.get("sprintEnd");
 
@@ -320,7 +324,8 @@ public final class MetricsApiServer {
 
             // --- Fetch stories from taiga-service ---
             HttpRequest storiesReq = HttpRequest.newBuilder()
-                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .uri(URI.create(
+                            TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
                     .GET().build();
             HttpResponse<String> storiesResp = HTTP.send(storiesReq, HttpResponse.BodyHandlers.ofString());
             if (storiesResp.statusCode() != 200) {
@@ -328,7 +333,8 @@ public final class MetricsApiServer {
                 sendError(ctx, "taiga-service stories fetch failed: " + storiesResp.body());
                 return;
             }
-            List<Map<String, Object>> stories = MAPPER.readValue(storiesResp.body(), new TypeReference<>() {});
+            List<Map<String, Object>> stories = MAPPER.readValue(storiesResp.body(), new TypeReference<>() {
+            });
 
             // --- Compute AUC ---
             AucService.AucResult auc = AucService.compute(stories, sprintStart, sprintEnd);
