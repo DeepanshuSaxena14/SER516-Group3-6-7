@@ -106,9 +106,11 @@ services:
       - PORT=${MIDDLEWARE_PORT:-4002}
       - G7_PMD_URL=http://g7-pmd:4000
       - G6_METRICS_URL=http://g6-metrics:8080
-      - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"}]}
+      - G3_AE_URL=http://g3-ae-metrics:8080
+      - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"},{"route":"ae","api":"http://g3-ae-metrics:8080"}]}
     depends_on:
       - g7-mongo
+      - g3-ae-metrics
 
 volumes:
   g7-workdata:
