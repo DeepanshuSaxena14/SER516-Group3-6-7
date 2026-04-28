@@ -3,14 +3,10 @@ package org.taiga;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.cert.X509Certificate;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,23 +17,9 @@ import java.util.Set;
 // this class handles all the calls to the taiga API
 public class TaigaClient {
 
-    private static final String BASE_URL = "https://swent0linux.asu.edu/taiga/api/v1";
+    private static final String BASE_URL = "https://api.taiga.io/api/v1";
 
-    private final HttpClient client = buildClient();
-
-    private static HttpClient buildClient() {
-        try {
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-            }}, null);
-            return HttpClient.newBuilder().sslContext(sslContext).build();
-        } catch (Exception e) {
-            return HttpClient.newHttpClient();
-        }
-    }
+    private final HttpClient client = HttpClient.newHttpClient();
 
     // logs in and stores the auth token + user id in the login object
     public boolean login(TaigaLoginObject loginObj) throws Exception {
