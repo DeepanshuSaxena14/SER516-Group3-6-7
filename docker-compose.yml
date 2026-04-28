@@ -7,9 +7,6 @@ services:
       - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?user=postgres.ouogetytffnkwjdiqjxv&password=ser516metrics&sslmode=require
       - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
       - JDBC_PASSWORD=ser516metrics
-      - TAIGA_BASE_URL=${TAIGA_BASE_URL}
-      - TAIGA_USERNAME=${TAIGA_USERNAME}
-      - TAIGA_PASSWORD=${TAIGA_PASSWORD}
     volumes:
       - "${INPUT_DIR:-./fanin-fanout/input}:/input"
     depends_on:
@@ -21,7 +18,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-      
+
+  taiga-service:
+    build: ./taiga-service
+    ports:
+      - "8085:8080"
+    environment:
+      - TAIGA_BASE_URL=${TAIGA_BASE_URL}
+      - TAIGA_USERNAME=${TAIGA_USERNAME}
+      - TAIGA_PASSWORD=${TAIGA_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   g6-postgres:
     image: postgres:16-alpine
@@ -106,9 +116,11 @@ services:
       - PORT=${MIDDLEWARE_PORT:-4002}
       - G7_PMD_URL=http://g7-pmd:4000
       - G6_METRICS_URL=http://g6-metrics:8080
+      - TAIGA_SERVICE_URL=http://taiga-service:8080
       - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"}]}
     depends_on:
       - g7-mongo
+      - taiga-service
 
 volumes:
   g7-workdata:

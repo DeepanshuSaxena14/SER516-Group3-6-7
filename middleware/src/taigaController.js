@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const G6_METRICS_URL = process.env.G6_METRICS_URL || "http://g6-metrics:8080";
+const TAIGA_SERVICE_URL = process.env.TAIGA_SERVICE_URL || "http://taiga-service:8080";
 
 export const getStories = async (req, res) => {
     const { project_id, sprint_id } = req.query;
@@ -8,7 +8,7 @@ export const getStories = async (req, res) => {
         return res.status(400).json({ error: "Missing project_id or sprint_id" });
     }
     try {
-        const response = await axios.get(`${G6_METRICS_URL}/taiga/stories`, {
+        const response = await axios.get(`${TAIGA_SERVICE_URL}/taiga/stories`, {
             params: { project_id, sprint_id },
             timeout: 30000
         });
@@ -24,7 +24,7 @@ export const getSprint = async (req, res) => {
         return res.status(400).json({ error: "Missing sprint_id" });
     }
     try {
-        const response = await axios.get(`${G6_METRICS_URL}/taiga/sprint`, {
+        const response = await axios.get(`${TAIGA_SERVICE_URL}/taiga/sprint`, {
             params: { sprint_id },
             timeout: 30000
         });
