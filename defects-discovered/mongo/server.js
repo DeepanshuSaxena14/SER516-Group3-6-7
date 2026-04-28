@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import crudRoutes from "./routes/CrudRoutes.js";
 import defectRoutes from "./routes/DefectRoutes.js";
 import velocityRoutes from "./routes/VelocityRoutes.js";
+import capacityRoutes from "./routes/CapacityRoutes.js";
 
 dotenv.config()
 
@@ -17,6 +18,7 @@ server.use(express.json())
 server.use("/api", crudRoutes);
 server.use("/api", defectRoutes);
 server.use("/api", velocityRoutes);
+server.use("/api", capacityRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
