@@ -51,7 +51,8 @@ public final class MetricsApiServer {
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
-                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc);
+                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
+                .get("/metrics/taiga/focus-factor", MetricsApiServer::handleTaigaFocusFactor);
     }
 
     public static void main(String[] args) {
@@ -348,6 +349,85 @@ public final class MetricsApiServer {
         } catch (Exception e) {
             ctx.status(500);
             sendError(ctx, "Taiga AUC computation failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * GET /metrics/taiga/focus-factor?project_id=&lt;int&gt;
+     *
+     * Fetches all sprints for the given project, computes focus factor
+     * (velocity / work capacity) per sprint, and returns a JSON array.
+     */
+    private static void handleTaigaFocusFactor(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+
+        if (projectIdParam == null || projectIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'project_id' is required and must be an integer.");
+            return;
+        }
+
+        int projectId;
+        try {
+            projectId = Integer.parseInt(projectIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'project_id' is required and must be an integer.");
+            return;
+        }
+
+        try {
+            // fetch all sprints for the project
+            HttpRequest sprintsReq = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/sprints?project_id=" + projectId))
+                    .GET().build();
+            HttpResponse<String> sprintsResp = HTTP.send(sprintsReq, HttpResponse.BodyHandlers.ofString());
+            if (sprintsResp.statusCode() != 200) {
+                ctx.status(502);
+                sendError(ctx, "taiga-service sprints fetch failed: " + sprintsResp.body());
+                return;
+            }
+            List<Map<String, Object>> sprints = MAPPER.readValue(sprintsResp.body(), new TypeReference<>() {});
+
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < sprints.size(); i++) {
+                Map<String, Object> sprint = sprints.get(i);
+                int sprintId = ((Number) sprint.get("id")).intValue();
+                String sprintName = String.valueOf(sprint.get("name"));
+                String sprintStart = sprint.get("estimated_start") != null ? sprint.get("estimated_start").toString() : "";
+                String sprintEnd = sprint.get("estimated_finish") != null ? sprint.get("estimated_finish").toString() : "";
+
+                // fetch stories for this sprint
+                HttpRequest storiesReq = HttpRequest.newBuilder()
+                        .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                        .GET().build();
+                HttpResponse<String> storiesResp = HTTP.send(storiesReq, HttpResponse.BodyHandlers.ofString());
+                List<Map<String, Object>> stories = storiesResp.statusCode() == 200
+                        ? MAPPER.readValue(storiesResp.body(), new TypeReference<>() {})
+                        : List.of();
+
+                FocusFactorService.FocusFactorResult result = FocusFactorService.compute(
+                        sprintId, sprintName, sprintStart, sprintEnd, stories);
+
+                if (i > 0) sb.append(",");
+                sb.append("{")
+                        .append("\"sprintId\":").append(result.sprintId()).append(",")
+                        .append("\"sprintName\":\"").append(jsonEscape(result.sprintName())).append("\",")
+                        .append("\"sprintStart\":\"").append(jsonEscape(result.sprintStart())).append("\",")
+                        .append("\"sprintEnd\":\"").append(jsonEscape(result.sprintEnd())).append("\",")
+                        .append("\"velocity\":").append(result.velocity()).append(",")
+                        .append("\"workCapacity\":").append(result.workCapacity()).append(",")
+                        .append("\"focusFactor\":").append(result.focusFactor())
+                        .append("}");
+            }
+            sb.append("]");
+
+            ctx.contentType("application/json");
+            ctx.result(sb.toString());
+
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Focus factor computation failed: " + e.getMessage());
         }
     }
 
