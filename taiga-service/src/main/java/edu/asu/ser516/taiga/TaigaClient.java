@@ -11,6 +11,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.cert.X509Certificate;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +37,36 @@ public final class TaigaClient {
     public TaigaClient(String baseUrl) {
         this.baseUrl = baseUrl;
         this.http = buildHttpClient();
+    }
+
+    private static Connection getDbConnection() throws SQLException {
+        String jdbcUrl = System.getenv("JDBC_URL");
+        String jdbcUser = System.getenv("JDBC_USER");
+        String jdbcPassword = System.getenv("JDBC_PASSWORD");
+        
+        if (jdbcUrl == null || jdbcUser == null || jdbcPassword == null) {
+            throw new SQLException("Database credentials not set: JDBC_URL, JDBC_USER, JDBC_PASSWORD required");
+        }
+        
+        return DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPassword);
+    }
+
+    private static void writeProjectVelocityToDb(int projectId, int sprintId, String sprintName,
+                                                  Object sprintStart, Object sprintEnd, int velocity)
+            throws SQLException {
+        String sql = "INSERT INTO public.sprint_velocity (project_id, sprint_id, sprint_name, sprint_start_date, sprint_end_date, velocity) " +
+                     "VALUES (?, ?, ?, ?, ?, ?)";
+        
+        try (Connection conn = getDbConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, projectId);
+            stmt.setInt(2, sprintId);
+            stmt.setString(3, sprintName);
+            stmt.setString(4, sprintStart != null ? sprintStart.toString() : null);
+            stmt.setString(5, sprintEnd != null ? sprintEnd.toString() : null);
+            stmt.setInt(6, velocity);
+            stmt.executeUpdate();
+        }
     }
 
     private static HttpClient buildHttpClient() {
@@ -147,5 +181,90 @@ public final class TaigaClient {
             throw new Exception("Failed to retrieve sprint " + sprintId + ": HTTP " + response.statusCode());
         }
         return mapper.readValue(response.body(), Map.class);
+    }
+
+    // Fetch project velocity
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchProjectVelocity(TaigaLoginObject loginObj, int projectId)
+            throws Exception {
+        
+        // get all milestones for the project
+        HttpRequest milestonesReq = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/milestones?project=" + projectId))
+                .header("Authorization", "Bearer " + loginObj.getAuthToken())
+                .GET()
+                .build();
+
+        HttpResponse<String> milestonesRes = http.send(milestonesReq, HttpResponse.BodyHandlers.ofString());
+        if (milestonesRes.statusCode() != 200) {
+            throw new Exception("Failed to fetch milestones: " + milestonesRes.statusCode());
+        }
+
+        List<Map<String, Object>> milestones = mapper.readValue(
+                milestonesRes.body(),
+                new TypeReference<List<Map<String, Object>>>() {});
+
+        // velocity map: sprint_id -> velocity
+        Map<String, Object> velocities = new java.util.LinkedHashMap<>();
+        
+        for (Map<String, Object> sprint : milestones) {
+            int sprintId = ((Number) sprint.get("id")).intValue();
+            String sprintName = (String) sprint.get("name");
+            Object sprintStart = sprint.get("estimated_start");
+            Object sprintEnd = sprint.get("estimated_finish");
+
+            // get user stories for this sprint
+            HttpRequest storiesReq = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/userstories?project=" + projectId + "&milestone=" + sprintId))
+                    .header("Authorization", "Bearer " + loginObj.getAuthToken())
+                    .GET()
+                    .build();
+
+            HttpResponse<String> storiesRes = http.send(storiesReq, HttpResponse.BodyHandlers.ofString());
+            List<Map<String, Object>> stories = new java.util.ArrayList<>();
+            
+            if (storiesRes.statusCode() == 200) {
+                stories = mapper.readValue(
+                        storiesRes.body(),
+                        new TypeReference<List<Map<String, Object>>>() {});
+            }
+
+            // calculate velocity
+            int velocity = 0;
+            for (Map<String, Object> story : stories) {
+                Object isClosed = story.get("is_closed");
+                if (isClosed instanceof Boolean && (Boolean) isClosed) {
+                    Object totalPoints = story.get("total_points");
+                    Object estimatedPoints = story.get("estimated_points");
+                    
+                    int points = 0;
+                    if (totalPoints instanceof Number) {
+                        points = ((Number) totalPoints).intValue();
+                    } else if (estimatedPoints instanceof Number) {
+                        points = ((Number) estimatedPoints).intValue();
+                    }
+                    velocity += points;
+                }
+            }
+
+            // store sprint velocity data
+            Map<String, Object> sprintVelocity = new java.util.LinkedHashMap<>();
+            sprintVelocity.put("sprintId", sprintId);
+            sprintVelocity.put("sprintName", sprintName);
+            sprintVelocity.put("sprintStart", sprintStart);
+            sprintVelocity.put("sprintEnd", sprintEnd);
+            sprintVelocity.put("velocity", velocity);
+            
+            velocities.put(String.valueOf(sprintId), sprintVelocity);
+            
+            // write to database
+            try {
+                writeProjectVelocityToDb(projectId, sprintId, sprintName, sprintStart, sprintEnd, velocity);
+            } catch (SQLException e) {
+                System.err.println("Warning: Failed to write velocity to database: " + e.getMessage());
+            }
+        }
+
+        return velocities;
     }
 }
