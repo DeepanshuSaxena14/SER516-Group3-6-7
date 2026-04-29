@@ -150,6 +150,21 @@ public final class TaigaClient {
         });
     }
 
+    // sprints are called milestones in the taiga API
+    public List<Map<String, Object>> getSprints(TaigaLoginObject loginObj, int projectId) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/milestones?project=" + projectId))
+                .header("Authorization", "Bearer " + loginObj.getAuthToken())
+                .GET()
+                .build();
+
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new Exception("Failed to retrieve sprints: HTTP " + response.statusCode());
+        }
+        return mapper.readValue(response.body(), new TypeReference<List<Map<String, Object>>>() {});
+    }
+
     public List<Map<String, Object>> getProjects(TaigaLoginObject loginObj) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/projects?member=" + loginObj.getUserId()))

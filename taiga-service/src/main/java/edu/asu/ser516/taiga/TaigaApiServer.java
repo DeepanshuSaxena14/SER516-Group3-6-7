@@ -16,6 +16,7 @@ public final class TaigaApiServer {
                 .get("/health", ctx -> ctx.result("ok"))
                 .get("/taiga/stories", TaigaApiServer::handleStories)
                 .get("/taiga/sprint", TaigaApiServer::handleSprint)
+                .get("/taiga/sprints", TaigaApiServer::handleSprints)
                 .get("/taiga/projects", TaigaApiServer::handleProjects)
                 .get("/taiga/project_velocity", TaigaApiServer::handleProjectVelocity)
                 .start(8080);
@@ -97,6 +98,42 @@ public final class TaigaApiServer {
             ctx.result(String.format(
                     "{\"sprintId\":%d,\"sprintStart\":\"%s\",\"sprintEnd\":\"%s\"}",
                     sprintId, start, end));
+        } catch (Exception e) {
+            ctx.status(500);
+            ctx.result("{\"error\":\"" + e.getMessage() + "\"}");
+        }
+    }
+
+    private static void handleSprints(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+
+        if (projectIdParam == null || projectIdParam.isBlank()) {
+            ctx.status(400);
+            ctx.result("{\"error\":\"Missing project_id\"}");
+            return;
+        }
+
+        int projectId;
+        try {
+            projectId = Integer.parseInt(projectIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            ctx.result("{\"error\":\"project_id must be an integer\"}");
+            return;
+        }
+
+        TaigaLoginObject login = TaigaLoginObject.fromEnv();
+        TaigaClient taiga = new TaigaClient();
+
+        try {
+            if (!taiga.login(login)) {
+                ctx.status(401);
+                ctx.result("{\"error\":\"Taiga authentication failed\"}");
+                return;
+            }
+            List<Map<String, Object>> sprints = taiga.getSprints(login, projectId);
+            ctx.contentType("application/json");
+            ctx.result(mapper.writeValueAsString(sprints));
         } catch (Exception e) {
             ctx.status(500);
             ctx.result("{\"error\":\"" + e.getMessage() + "\"}");
