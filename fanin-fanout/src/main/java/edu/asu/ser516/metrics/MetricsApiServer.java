@@ -357,6 +357,43 @@ public final class MetricsApiServer {
         }
     }
 
+    private static void handleTaigaStories(Context ctx) {
+        String projectId = ctx.queryParam("project_id");
+        String sprintId = ctx.queryParam("sprint_id");
+        if (projectId == null || sprintId == null) {
+            sendError(ctx, "project_id and sprint_id are required query parameters.");
+            return;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to proxy stories request to taiga-service: " + e.getMessage());
+        }
+    }
+
+    private static void handleTaigaSprint(Context ctx) {
+        String sprintId = ctx.queryParam("sprint_id");
+        if (sprintId == null) {
+            sendError(ctx, "sprint_id is a required query parameter.");
+            return;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/sprint?sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to proxy sprint request to taiga-service: " + e.getMessage());
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Aggregation helpers
     // -------------------------------------------------------------------------
