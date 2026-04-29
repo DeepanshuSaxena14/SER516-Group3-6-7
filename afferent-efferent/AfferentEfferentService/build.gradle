@@ -39,6 +39,6 @@ tasks.named('run') {
 }
 
 
-//test {
-//    useJUnitPlatform()
-//}
+test {
+    useJUnitPlatform()
+}

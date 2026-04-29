@@ -313,6 +313,51 @@ public class TaigaClient {
         return project;
     }
 
+    public List<FocusFactorMetrics> getFocusFactorMetrics(TaigaLoginObject loginObj, int projectId) throws Exception {
+        List<FocusFactorMetrics> results = new ArrayList<>();
+        String sprintsJson = getSprints(loginObj, projectId);
+        JSONArray sprints = new JSONArray(sprintsJson);
+
+        for (int i = 0; i < sprints.length(); i++) {
+            JSONObject sprint = sprints.getJSONObject(i);
+            int sprintId = sprint.getInt("id");
+            String sprintName = sprint.getString("name");
+
+            // fetch user stories assigned to sprint
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + "/userstories?project=" + projectId + "&milestone=" + sprintId))
+                    .header("Authorization", "Bearer " + loginObj.getAuthToken())
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                continue;
+            }
+
+            JSONArray stories = new JSONArray(response.body());
+            double workCapacity = 0;
+            double velocity = 0;
+
+            for (int j = 0; j < stories.length(); j++) {
+                JSONObject story = stories.getJSONObject(j);
+                double points = story.optDouble("total_points", 0.0);
+                if (points < 0) points = 0.0;
+                
+                workCapacity += points;
+
+                if (story.has("is_closed") && story.getBoolean("is_closed")) {
+                    velocity += points;
+                }
+            }
+
+            double focusFactor = workCapacity == 0 ? 0.0 : (velocity / workCapacity) * 100.0;
+            results.add(new FocusFactorMetrics(sprintName, workCapacity, velocity, focusFactor));
+        }
+
+        return results;
+    }
+
     // returns cruft ratio for each sprint in the project
     public List<CruftMetrics> getCruftMetrics(TaigaLoginObject loginObj, int projectId) throws Exception {
         List<CruftMetrics> results = new ArrayList<>();

@@ -10,6 +10,7 @@ import org.service.Metrics;
 import org.github.CloneObject;
 import org.taiga.CruftMetrics;
 import org.taiga.DeliveryMetrics;
+import org.taiga.FocusFactorMetrics;
 import org.taiga.TaigaClient;
 import org.taiga.TaigaLoginObject;
 
@@ -34,6 +35,7 @@ public class ApiServer {
         server.createContext("/api/projects", new ProjectsHandler());
         server.createContext("/api/metrics/delivery", new DeliveryHandler());
         server.createContext("/api/metrics/cruft", new CruftHandler());
+        server.createContext("/api/metrics/focus-factor", new FocusFactorHandler());
         server.createContext("/api/analyze", new AnalyzeHandler());
 
         server.setExecutor(null);
@@ -237,6 +239,63 @@ public class ApiServer {
                     obj.put("totalStories", m.totalStories());
                     obj.put("cruftStories", m.cruftStories());
                     obj.put("cruftPercent", m.cruftPercentage());
+                    arr.put(obj);
+                }
+
+                byte[] bytes = arr.toString().getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, bytes.length);
+                exchange.getResponseBody().write(bytes);
+                exchange.getResponseBody().close();
+            } catch (Exception e) {
+                String resp = "{\"error\": \"" + e.getMessage() + "\"}";
+                exchange.sendResponseHeaders(500, resp.length());
+                exchange.getResponseBody().write(resp.getBytes());
+                exchange.getResponseBody().close();
+            }
+        }
+    }
+
+    static class FocusFactorHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+
+            if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            try {
+                String query = exchange.getRequestURI().getQuery();
+                Map<String, String> params = new HashMap<>();
+                if (query != null) {
+                    for (String pair : query.split("&")) {
+                        String[] kv = pair.split("=", 2);
+                        if (kv.length == 2) params.put(kv[0], kv[1]);
+                    }
+                }
+
+                String token = params.get("token");
+                TaigaLoginObject loginObj = sessions.get(token);
+                if (loginObj == null) {
+                    String resp = "{\"error\": \"invalid token\"}";
+                    exchange.sendResponseHeaders(401, resp.length());
+                    exchange.getResponseBody().write(resp.getBytes());
+                    exchange.getResponseBody().close();
+                    return;
+                }
+
+                int projectId = Integer.parseInt(params.get("projectId"));
+                List<FocusFactorMetrics> metrics = taigaClient.getFocusFactorMetrics(loginObj, projectId);
+
+                JSONArray arr = new JSONArray();
+                for (FocusFactorMetrics m : metrics) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("sprint", m.sprintName());
+                    obj.put("workCapacity", m.workCapacity());
+                    obj.put("velocity", m.velocity());
+                    obj.put("focusFactor", m.focusFactor());
                     arr.put(obj);
                 }
 
