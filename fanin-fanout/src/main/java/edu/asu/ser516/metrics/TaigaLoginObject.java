@@ -1,14 +1,10 @@
 package edu.asu.ser516.metrics;
 
-/**
- * Holds Taiga API credentials and the auth token returned after a successful
- * login call. Use {@link #fromEnv()} to construct an instance from environment
- * variables ({@code TAIGA_USERNAME} and {@code TAIGA_PASSWORD}).
- */
-public final class TaigaLoginObject {
+// stores the users login info and the token we get back from taiga
+public class TaigaLoginObject {
 
-    private final String username;
-    private final String password;
+    private String username;
+    private String password;
     private String authToken;
     private int userId;
 
@@ -17,28 +13,22 @@ public final class TaigaLoginObject {
         this.password = password;
     }
 
-    /**
-     * Constructs a {@code TaigaLoginObject} whose credentials are read from
-     * the {@code TAIGA_USERNAME} and {@code TAIGA_PASSWORD} environment
-     * variables. Returns an instance with blank/null fields if the variables
-     * are absent; the caller is responsible for validating before use.
-     */
+    // pull credentials from env vars so we dont hardcode them
     public static TaigaLoginObject fromEnv() {
-        String username = System.getenv("TAIGA_USERNAME");
-        String password = System.getenv("TAIGA_PASSWORD");
-        return new TaigaLoginObject(
-                username != null ? username : "",
-                password != null ? password : "");
+        String user = System.getenv("TAIGA_USERNAME");
+        String pass = System.getenv("TAIGA_PASSWORD");
+        if (user == null || pass == null) {
+            throw new IllegalStateException("TAIGA_USERNAME and TAIGA_PASSWORD must be set");
+        }
+        return new TaigaLoginObject(user, pass);
     }
 
-    public String getUsername()  { return username;  }
-    public String getPassword()  { return password;  }
+    public String getUsername() { return username; }
+    public String getPassword() { return password; }
     public String getAuthToken() { return authToken; }
-    public int    getUserId()    { return userId;     }
+    public int getUserId() { return userId; }
 
-    /** Set by {@link TaigaClient#login} after a successful authentication. */
+    // these get set after a successful login
     public void setAuthToken(String authToken) { this.authToken = authToken; }
-
-    /** Set by {@link TaigaClient#login} after a successful authentication. */
     public void setUserId(int userId) { this.userId = userId; }
 }
