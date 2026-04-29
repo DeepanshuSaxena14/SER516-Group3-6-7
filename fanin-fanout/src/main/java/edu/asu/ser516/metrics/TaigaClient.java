@@ -213,7 +213,7 @@ public final class TaigaClient {
         Map<String, Object> json = mapper.readValue(response.body(), Map.class);
         Object assigned = json.get("assigned_points");
         java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
-        out.put("assigned_points", assigned);
+        out.put("capacity", assigned);
         return out;
     }
 
