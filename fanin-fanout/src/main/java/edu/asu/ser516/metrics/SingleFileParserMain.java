@@ -1,6 +1,7 @@
 package edu.asu.ser516.metrics;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import java.nio.file.Path;
@@ -12,7 +13,9 @@ public class SingleFileParserMain {
             System.exit(1);
         }
         Path file = Path.of(args[0]);
-        JavaParser parser = new JavaParser();
+        ParserConfiguration config = new ParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE);
+        JavaParser parser = new JavaParser(config);
         ParseResult<CompilationUnit> result = parser.parse(file);
         if (result.getResult().isEmpty()) {
             System.out.println("Parse failed: " + file);

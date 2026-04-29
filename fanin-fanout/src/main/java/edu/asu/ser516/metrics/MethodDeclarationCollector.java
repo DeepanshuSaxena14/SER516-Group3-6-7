@@ -1,6 +1,7 @@
 package edu.asu.ser516.metrics;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -14,7 +15,9 @@ public class MethodDeclarationCollector {
 
     public Map<String, MethodDeclaration> collectMethods(Iterable<Path> javaFiles) throws IOException {
         Map<String, MethodDeclaration> methods = new TreeMap<>();
-        JavaParser parser = new JavaParser();
+        ParserConfiguration config = new ParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE);
+        JavaParser parser = new JavaParser(config);
 
         for (Path file : javaFiles) {
             try {

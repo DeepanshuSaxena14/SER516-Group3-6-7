@@ -1,6 +1,7 @@
 package edu.asu.ser516.metrics;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -29,7 +30,9 @@ public class MethodFanInAnalyzer {
             fanInCounts.put(methodKey, 0);
         }
 
-        JavaParser parser = new JavaParser();
+        ParserConfiguration config = new ParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE);
+        JavaParser parser = new JavaParser(config);
 
         for (Path file : javaFiles) {
             try {
