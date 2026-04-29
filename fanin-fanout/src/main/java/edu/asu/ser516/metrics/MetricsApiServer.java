@@ -40,7 +40,8 @@ public final class MetricsApiServer {
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
                 .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
                 .get("/taiga/stories", MetricsApiServer::handleTaigaStories)
-                .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint);
+                .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint)
+                .get("/taiga/project_capacity", MetricsApiServer::handleTaigaProjectCapacity);
     }
 
     public static void main(String[] args) {
@@ -423,6 +424,45 @@ public final class MetricsApiServer {
             sendError(ctx, "Failed to fetch sprint: " + e.getMessage());
         }
     }
+
+    public static void handleTaigaProjectCapacity(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+
+        if (projectIdParam == null || projectIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Required query parameter 'project_id' is missing.");
+            return;
+        }
+
+        int projectId;
+        try {
+            projectId = Integer.parseInt(projectIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "project_id must be an integer.");
+            return;
+        }
+
+        TaigaLoginObject login = TaigaLoginObject.fromEnv();
+        TaigaClient taiga = new TaigaClient();
+
+        try {
+            if (!taiga.login(login)) {
+                ctx.status(401);
+                sendError(ctx, "Taiga authentication failed.");
+                return;
+            }
+            Map<String, Object> capacity = taiga.fetchProjectCapacity(login, projectId);
+            MetricDbWriter.writeProjectCapacity(capacity, projectId);
+            ctx.contentType("application/json");
+            ctx.result(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(capacity));
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to fetch project capacity: " + e.getMessage());
+        
+        }
+    }
+
 
     // -------------------------------------------------------------------------
     // Aggregation helpers
