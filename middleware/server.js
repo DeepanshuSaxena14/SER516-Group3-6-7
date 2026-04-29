@@ -33,12 +33,21 @@ export const createApp = () => {
       message: "Middleware server running",
       port: PORT,
       routes: [
-        { route: "/analyze", description: "POST — orchestrates all metric services" },
+        { route: "/analyze", description: "POST orchestrates all metric services" },
+        { route: "/metrics/cruft", description: "GET exposes cruft metric for dashboard integration" },
         ...serviceConfig.routes.map(({ route, api }) => ({ route, api })),
       ],
     });
   });
-
+  app.get("/metrics/cruft", (req, res) => {
+    res.json({
+      metric: "cruft",
+      status: "available",
+      description: "Cruft metric endpoint for Grafana dashboard integration",
+      source: "AfferentEfferentService",
+      route: "/metrics/cruft"
+    });
+  });
   app.use((req, res) => {
     res.status(404).json({
       error: `No middleware service is configured for ${req.path}`,
