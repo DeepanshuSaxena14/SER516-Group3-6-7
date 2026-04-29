@@ -1,6 +1,8 @@
 edu/asu/ser516/taiga/TaigaClient$1.class
 edu/asu/ser516/taiga/TaigaClient.class
-edu/asu/ser516/taiga/TaigaClient$3.class
+edu/asu/ser516/taiga/AucComputer$AucResult.class
 edu/asu/ser516/taiga/TaigaClient$2.class
-edu/asu/ser516/taiga/TaigaLoginObject.class
 edu/asu/ser516/taiga/TaigaApiServer.class
+edu/asu/ser516/taiga/TaigaClient$3.class
+edu/asu/ser516/taiga/AucComputer.class
+edu/asu/ser516/taiga/TaigaLoginObject.class
