@@ -1,81 +1,99 @@
-import Stat from "../models/StatModel.js";
+import pkg from "pg";
+const { Pool } = pkg;
 
-export const calculateAndSaveSprintVelocities = async (req, res) => {
-  const { projectId } = req.body;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+export const getVelocities = async (req, res) => {
+  const { projectId } = req.params;
+
   const token = process.env.TAIGA_BEARER_TOKEN;
+  const apiBaseUrl = process.env.TAIGA_API_BASE_URL || "https://api.taiga.io";
+  const apiV1 = `${apiBaseUrl}/api/v1`;
 
   if (!projectId) {
     return res.status(400).json({ error: "projectId is required" });
   }
 
   if (!token) {
-    return res.status(500).json({ error: "Missing Taiga auth token (set TAIGA_BEARER_TOKEN)" });
+    return res.status(500).json({ error: "Missing TAIGA_BEARER_TOKEN" });
   }
 
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+  };
+
   try {
-    // Fetch all sprints
-    const sprintsRes = await fetch(`https://api.taiga.io/api/v1/milestones?project=${projectId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    });
+    // Fetch all sprints (milestones)
+    const sprintsRes = await fetch(
+      `${apiV1}/milestones?project=${projectId}`,
+      { headers }
+    );
 
     if (!sprintsRes.ok) {
       const text = await sprintsRes.text().catch(() => "");
       return res.status(sprintsRes.status).json({
-        error: "Failed to fetch Taiga sprints",
+        error: "Failed to fetch sprints from Taiga",
         details: text || undefined,
       });
     }
 
     const sprints = await sprintsRes.json();
-    const savedVelocities = [];
 
-    // For each sprint, fetch user stories and calculate velocity
-    for (const sprint of sprints) {
-      try {
+    // Fetch user stories for all sprints in parallel and compute velocities
+    const velocities = await Promise.all(
+      sprints.map(async (sprint) => {
         const storiesRes = await fetch(
-          `https://api.taiga.io/api/v1/userstories?project=${projectId}&milestone=${sprint.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
+          `${apiV1}/userstories?project=${projectId}&milestone=${sprint.id}`,
+          { headers }
         );
 
-        if (!storiesRes.ok) continue;
-
-        const stories = await storiesRes.json();
-
-        // Calculate velocity: sum of estimated_points for accepted stories
+        const stories = storiesRes.ok ? await storiesRes.json() : [];
         const velocity = (stories || [])
-          .filter((story) => story.status_extra_info?.name?.toLowerCase() === "accepted")
-          .reduce((sum, story) => sum + (story.estimated_points || 0), 0);
+          .filter((s) => s.is_closed === true)
+          .reduce((sum, s) => sum + (s.total_points ?? s.estimated_points ?? 0), 0);
 
-        // Save to MongoDB
-        const stat = new Stat({
+        return {
           sprintName: sprint.name,
-          sprintStartDate: sprint.created_date ? new Date(sprint.created_date) : null,
-          sprintEndDate: sprint.estimated_finish ? new Date(sprint.estimated_finish) : null,
+          sprintId: sprint.id,
+          sprintStart: sprint.estimated_start,
+          sprintEnd: sprint.estimated_finish,
           velocity,
-        });
+        };
+      })
+    );
 
-        const saved = await stat.save();
-        savedVelocities.push(saved);
-      } catch (sprintError) {
-        console.error(`Error processing sprint ${sprint.name}:`, sprintError.message);
-      }
-    }
+    await Promise.all(
+      velocities.map((v) =>
+        pool.query(
+          `
+          INSERT INTO sprint_velocity
+            (project_id, sprint_id, sprint_name, sprint_start_date, sprint_end_date, velocity)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (project_id, sprint_id)
+          DO UPDATE SET
+            sprint_name       = EXCLUDED.sprint_name,
+            sprint_start_date = EXCLUDED.sprint_start_date,
+            sprint_end_date   = EXCLUDED.sprint_end_date,
+            velocity          = EXCLUDED.velocity
+          `,
+          [projectId, v.sprintId, v.sprintName, v.sprintStart, v.sprintEnd, v.velocity]
+        )
+      )
+    );
 
-    res.status(200).json({
-      message: `Calculated and saved velocities for ${savedVelocities.length} sprints`,
-      velocities: savedVelocities,
+    // 4. Respond
+    return res.status(200).json({
+      projectId,
+      velocities,
+      saved: velocities.length,
     });
   } catch (err) {
-    return res.status(502).json({
-      error: "Error contacting Taiga",
+    console.error("Velocity error:", err);
+    return res.status(500).json({
+      error: "Failed to compute or save velocities",
       details: err instanceof Error ? err.message : String(err),
     });
   }
