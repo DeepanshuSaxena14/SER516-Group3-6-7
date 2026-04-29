@@ -37,8 +37,19 @@ export const createApp = () => {
       port: PORT,
       routes: [
         { route: "/analyze", description: "POST — orchestrates all metric services" },
+        { route: "/metrics/focus-factor", description: "GET exposes focus factor metric for dashboard integration" },
         ...serviceConfig.routes.map(({ route, api }) => ({ route, api })),
       ],
+    });
+  });
+
+  app.get("/metrics/focus-factor", (req, res) => {
+    res.json({
+      metric: "focus-factor",
+      status: "available",
+      description: "Focus factor metric endpoint for Grafana dashboard integration",
+      source: "TaigaService",
+      route: "/metrics/focus-factor"
     });
   });
 
