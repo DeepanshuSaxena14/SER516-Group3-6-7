@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { calculateAndSaveSprintVelocities } from "../controllers/VelocityController.js";
+import { getVelocities } from "../controllers/VelocityController.js";
 
 const router = Router();
 
-router.post("/calculate-velocities", calculateAndSaveSprintVelocities);
+router.get("/velocity/:projectId", getVelocities);
 
 export default router;
