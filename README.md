@@ -34,9 +34,9 @@ docker --version
 docker compose version
 ```
 
-## Environment Setup
+#Environment Setup
 
-# Start integrated services
+## Start integrated services
 ```bash
 docker compose up --build
 ```
@@ -66,9 +66,6 @@ docker compose up --build
    - Observability - https://swent0linux.asu.edu/grafana/d/ser516-observability/service-observability-metric?orgId=7&from=now-24h&to=now&timezone=browser&refresh=30s
 
 ---
-
-> [!NOTE]
-> There is a taiga-service folder and dashboard in grafana but are incomplete. 
 
 ## Prometheus Observability
 
@@ -101,3 +98,7 @@ We have automation pipelines set to update Grafana, run available static analysi
 - Jenkins URL: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
 
 ---
+
+## Things that are incomplete or redundant
+- There is a taiga-service folder and dashboard in grafana but are incomplete.
+- We have multiple mongodb apis among others that we dont use and need to remove.
