@@ -1,0 +1,19 @@
+scrape_configs:
+
+  - job_name: 'g6-metrics'
+    scrape_interval: 15s
+    metrics_path: '/prometheus'
+    static_configs:
+      - targets: ['g6-metrics:8080']
+
+  - job_name: 'middleware'
+    scrape_interval: 15s
+    metrics_path: '/prometheus'
+    static_configs:
+      - targets: ['middlewares:4002']
+
+  - job_name: 'g7-pmd'
+    scrape_interval: 15s
+    metrics_path: '/prometheus'
+    static_configs:
+      - targets: ['g7-pmd:4000']

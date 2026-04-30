@@ -1,6 +1,8 @@
 package edu.asu.ser516.metrics;
 
-import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
@@ -26,7 +28,15 @@ public class CouplingAnalyzer {
 
         for (Path path : sourceFiles) {
             try {
-                CompilationUnit cu = StaticJavaParser.parse(path);
+                ParserConfiguration config = new ParserConfiguration()
+                        .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE);
+                JavaParser parser = new JavaParser(config);
+                ParseResult<CompilationUnit> result = parser.parse(path);
+                if (result.getResult().isEmpty()) {
+                    System.err.println("Parse failed: " + path);
+                    continue;
+                }
+                CompilationUnit cu = result.getResult().get();
                 parsedUnits.put(path, cu);
 
                 String packageName = cu.getPackageDeclaration()

@@ -2,6 +2,13 @@ package edu.asu.ser516.metrics;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,8 +32,19 @@ public final class MetricsApiServer {
     private MetricsApiServer() {
     }
 
-    private static final String TAIGA_SERVICE_URL =
-            System.getenv().getOrDefault("TAIGA_SERVICE_URL", "http://taiga-service:8080");
+    private static final PrometheusMeterRegistry PROMETHEUS_REGISTRY = new PrometheusMeterRegistry(
+            PrometheusConfig.DEFAULT);
+
+    static {
+        // Bind standard JVM metrics: memory, GC, threads, CPU, class loading
+        new JvmMemoryMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmGcMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmThreadMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ClassLoaderMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ProcessorMetrics().bindTo(PROMETHEUS_REGISTRY);
+    }
+    private static final String TAIGA_SERVICE_URL = System.getenv().getOrDefault("TAIGA_SERVICE_URL",
+            "http://taiga-service:8080");
 
     private static final HttpClient HTTP = HttpClient.newHttpClient();
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -47,23 +65,33 @@ public final class MetricsApiServer {
         return Javalin.create(config -> {
             config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
         })
+                .get("/prometheus", MetricsApiServer::handlePrometheus)
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
                 .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
                 .get("/metrics/taiga/focus-factor", MetricsApiServer::handleTaigaFocusFactor);
+                .get("/taiga/stories", MetricsApiServer::handleTaigaStories)
+                .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint)
+                .get("/health", ctx -> ctx.result("OK"));
     }
 
     public static void main(String[] args) {
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         create().start(port);
         System.out.println("Metrics API server started on port " + port);
+        System.out.println("Prometheus metrics available at http://localhost:" + port + "/prometheus");
     }
 
     // -------------------------------------------------------------------------
     // Handlers
     // -------------------------------------------------------------------------
+
+    private static void handlePrometheus(Context ctx) {
+        ctx.contentType("text/plain; version=0.0.4; charset=utf-8");
+        ctx.result(PROMETHEUS_REGISTRY.scrape());
+    }
 
     private static void handleFanOut(Context ctx) {
         Path root;
@@ -428,6 +456,43 @@ public final class MetricsApiServer {
         } catch (Exception e) {
             ctx.status(500);
             sendError(ctx, "Focus factor computation failed: " + e.getMessage());
+        }
+    }
+  
+    private static void handleTaigaStories(Context ctx) {
+        String projectId = ctx.queryParam("project_id");
+        String sprintId = ctx.queryParam("sprint_id");
+        if (projectId == null || sprintId == null) {
+            sendError(ctx, "project_id and sprint_id are required query parameters.");
+            return;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to proxy stories request to taiga-service: " + e.getMessage());
+        }
+    }
+
+    private static void handleTaigaSprint(Context ctx) {
+        String sprintId = ctx.queryParam("sprint_id");
+        if (sprintId == null) {
+            sendError(ctx, "sprint_id is a required query parameter.");
+            return;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/sprint?sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to proxy sprint request to taiga-service: " + e.getMessage());
         }
     }
 

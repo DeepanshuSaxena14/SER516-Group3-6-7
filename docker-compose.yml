@@ -16,7 +16,7 @@ services:
       g6-postgres:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/metrics/fanout?path=/input/Simple-Java-Calculator/src || exit 1" ]
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1" ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -110,6 +110,27 @@ services:
     depends_on:
       - g7-mongo
       - g3-ae-metrics
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - g6-metrics
+      - middlewares
+      - g7-pmd
+
+  metrics-writer:
+    build: ./prometheus/metrics-writer
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - WRITE_INTERVAL_MS=15000
+      - SUPABASE_DB_URL=postgresql://postgres.ouogetytffnkwjdiqjxv:ser516metrics@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+    depends_on:
+      - prometheus
+    restart: unless-stopped
 
   taiga-service:
     build: ./taiga-service

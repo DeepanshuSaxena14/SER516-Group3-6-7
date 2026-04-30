@@ -4,9 +4,16 @@ import { fileURLToPath } from "node:url";
 import { createServiceProxy } from "./src/createServiceProxy.js";
 import { loadServiceConfig } from "./src/loadServiceConfig.js";
 import { analyzeRepo } from "./src/analyzeController.js";
+import client from "prom-client";
 import { getStories, getSprint } from "./src/taigaController.js";
 
 const PORT = Number(process.env.PORT) || 4002;
+
+const register = new client.Registry();
+
+client.collectDefaultMetrics({
+  register
+});
 
 export const createApp = () => {
   const app = express();
@@ -15,6 +22,11 @@ export const createApp = () => {
   app.use(cors());
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
+
+  app.get("/prometheus", async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  })
 
   app.post("/analyze", analyzeRepo);
   app.get("/taiga/stories", getStories);
@@ -36,6 +48,7 @@ export const createApp = () => {
       message: "Middleware server running",
       port: PORT,
       routes: [
+        { route: "/prometheus", description: "GET — Prometheus metrics scrape endpoint" },
         { route: "/analyze", description: "POST — orchestrates all metric services" },
         ...serviceConfig.routes.map(({ route, api }) => ({ route, api })),
       ],
@@ -56,6 +69,7 @@ export const startServer = () => {
 
   return app.listen(PORT, () => {
     console.log(`Middleware running on port ${PORT}`);
+    console.log(`Prometheus metrics available at http://localhost:${PORT}/prometheus`);
   });
 };
 
