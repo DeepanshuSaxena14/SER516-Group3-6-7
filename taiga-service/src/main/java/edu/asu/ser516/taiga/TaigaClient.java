@@ -52,20 +52,37 @@ public final class TaigaClient {
     }
 
     private static void writeProjectVelocityToDb(int projectId, int sprintId, String sprintName,
-                                                  Object sprintStart, Object sprintEnd, int velocity)
+                                                  Object sprintStart, Object sprintEnd, double velocity)
             throws SQLException {
         String sql = "INSERT INTO public.sprint_velocity (project_id, sprint_id, sprint_name, sprint_start_date, sprint_end_date, velocity) " +
-                     "VALUES (?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?) " +
+                     "ON CONFLICT (project_id, sprint_id) DO UPDATE SET " +
+                     "sprint_name = EXCLUDED.sprint_name, sprint_start_date = EXCLUDED.sprint_start_date, " +
+                     "sprint_end_date = EXCLUDED.sprint_end_date, velocity = EXCLUDED.velocity, " +
+                     "recorded_at = NOW()";
         
         try (Connection conn = getDbConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, projectId);
             stmt.setInt(2, sprintId);
             stmt.setString(3, sprintName);
-            stmt.setString(4, sprintStart != null ? sprintStart.toString() : null);
-            stmt.setString(5, sprintEnd != null ? sprintEnd.toString() : null);
-            stmt.setInt(6, velocity);
+            stmt.setDate(4, toSqlDate(sprintStart));
+            stmt.setDate(5, toSqlDate(sprintEnd));
+            stmt.setDouble(6, velocity);
             stmt.executeUpdate();
+        }
+    }
+
+    /** Converts a Taiga date string ("YYYY-MM-DD") to java.sql.Date; returns null if blank/invalid. */
+    private static java.sql.Date toSqlDate(Object value) {
+        if (value == null) return null;
+        String s = value.toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            return java.sql.Date.valueOf(s);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Warning: Could not parse date '" + s + "': " + e.getMessage());
+            return null;
         }
     }
 
@@ -245,18 +262,18 @@ public final class TaigaClient {
             }
 
             // calculate velocity
-            int velocity = 0;
+            double velocity = 0;
             for (Map<String, Object> story : stories) {
                 Object isClosed = story.get("is_closed");
                 if (isClosed instanceof Boolean && (Boolean) isClosed) {
                     Object totalPoints = story.get("total_points");
                     Object estimatedPoints = story.get("estimated_points");
                     
-                    int points = 0;
+                    double points = 0;
                     if (totalPoints instanceof Number) {
-                        points = ((Number) totalPoints).intValue();
+                        points = ((Number) totalPoints).doubleValue();
                     } else if (estimatedPoints instanceof Number) {
-                        points = ((Number) estimatedPoints).intValue();
+                        points = ((Number) estimatedPoints).doubleValue();
                     }
                     velocity += points;
                 }
@@ -268,7 +285,7 @@ public final class TaigaClient {
             sprintVelocity.put("sprintName", sprintName);
             sprintVelocity.put("sprintStart", sprintStart);
             sprintVelocity.put("sprintEnd", sprintEnd);
-            sprintVelocity.put("velocity", velocity);
+            sprintVelocity.put("velocity", velocity);  // double, preserves fractional points
             
             velocities.put(String.valueOf(sprintId), sprintVelocity);
             

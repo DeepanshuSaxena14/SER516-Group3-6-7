@@ -88,7 +88,6 @@ services:
 
   g3-ae-metrics:
     build: ./afferent-efferent/AfferentEfferentService
-    profiles: [ "manual" ]
     stdin_open: true
     tty: true
     volumes:
@@ -120,6 +119,9 @@ services:
       - TAIGA_BASE_URL=${TAIGA_BASE_URL}
       - TAIGA_USERNAME=${TAIGA_USERNAME}
       - TAIGA_PASSWORD=${TAIGA_PASSWORD}
+      - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+      - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
+      - JDBC_PASSWORD=ser516metrics
 
 volumes:
   g7-workdata:
