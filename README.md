@@ -76,3 +76,5 @@ We have automation pipelines set to update Grafana, run available static analysi
 - Jenkins URL: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
 
 ---
+## Sprint 4 Updates
+# Sprint 4 Final Release

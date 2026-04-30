@@ -3,10 +3,14 @@ package org.taiga;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.security.cert.X509Certificate;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,9 +21,23 @@ import java.util.Set;
 // this class handles all the calls to the taiga API
 public class TaigaClient {
 
-    private static final String BASE_URL = "https://api.taiga.io/api/v1";
+    private static final String BASE_URL = "https://swent0linux.asu.edu/taiga/api/v1";
 
-    private final HttpClient client = HttpClient.newHttpClient();
+    private final HttpClient client = buildClient();
+
+    private static HttpClient buildClient() {
+        try {
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+            }}, null);
+            return HttpClient.newBuilder().sslContext(sslContext).build();
+        } catch (Exception e) {
+            return HttpClient.newHttpClient();
+        }
+    }
 
     // logs in and stores the auth token + user id in the login object
     public boolean login(TaigaLoginObject loginObj) throws Exception {
@@ -293,6 +311,51 @@ public class TaigaClient {
         }
 
         return project;
+    }
+
+    public List<FocusFactorMetrics> getFocusFactorMetrics(TaigaLoginObject loginObj, int projectId) throws Exception {
+        List<FocusFactorMetrics> results = new ArrayList<>();
+        String sprintsJson = getSprints(loginObj, projectId);
+        JSONArray sprints = new JSONArray(sprintsJson);
+
+        for (int i = 0; i < sprints.length(); i++) {
+            JSONObject sprint = sprints.getJSONObject(i);
+            int sprintId = sprint.getInt("id");
+            String sprintName = sprint.getString("name");
+
+            // fetch user stories assigned to sprint
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + "/userstories?project=" + projectId + "&milestone=" + sprintId))
+                    .header("Authorization", "Bearer " + loginObj.getAuthToken())
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                continue;
+            }
+
+            JSONArray stories = new JSONArray(response.body());
+            double workCapacity = 0;
+            double velocity = 0;
+
+            for (int j = 0; j < stories.length(); j++) {
+                JSONObject story = stories.getJSONObject(j);
+                double points = story.optDouble("total_points", 0.0);
+                if (points < 0) points = 0.0;
+                
+                workCapacity += points;
+
+                if (story.has("is_closed") && story.getBoolean("is_closed")) {
+                    velocity += points;
+                }
+            }
+
+            double focusFactor = workCapacity == 0 ? 0.0 : (velocity / workCapacity) * 100.0;
+            results.add(new FocusFactorMetrics(sprintName, workCapacity, velocity, focusFactor));
+        }
+
+        return results;
     }
 
     // returns cruft ratio for each sprint in the project
