@@ -21,7 +21,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-      
 
   g6-postgres:
     image: postgres:16-alpine
@@ -88,7 +87,6 @@ services:
 
   g3-ae-metrics:
     build: ./afferent-efferent/AfferentEfferentService
-    profiles: [ "manual" ]
     stdin_open: true
     tty: true
     volumes:
