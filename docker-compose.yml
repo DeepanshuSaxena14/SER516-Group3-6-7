@@ -4,24 +4,24 @@ services:
     ports:
       - "${G6_METRICS_PORT:-8082}:8080"
     environment:
-    - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?user=postgres.ouogetytffnkwjdiqjxv&password=ser516metrics&sslmode=require
-    - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
-    - JDBC_PASSWORD=ser516metrics
+      - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?user=postgres.ouogetytffnkwjdiqjxv&password=ser516metrics&sslmode=require
+      - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
+      - JDBC_PASSWORD=ser516metrics
+      - TAIGA_BASE_URL=${TAIGA_BASE_URL}
+      - TAIGA_USERNAME=${TAIGA_USERNAME}
+      - TAIGA_PASSWORD=${TAIGA_PASSWORD}
     volumes:
       - "${INPUT_DIR:-./fanin-fanout/input}:/input"
     depends_on:
       g6-postgres:
         condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -fsS http://localhost:8080/metrics/fanout?path=/input/Simple-Java-Calculator/src || exit 1",
-        ]
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1" ]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 20s
+      
 
   g6-postgres:
     image: postgres:16-alpine
@@ -34,13 +34,13 @@ services:
     volumes:
       - ./fanin-fanout/docker/init-metrics.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U grafana -d metrics"]
+      test: [ "CMD-SHELL", "pg_isready -U grafana -d metrics" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   g6-grafana:
-    profiles: ["local"]
+    profiles: [ "local" ]
     image: grafana/grafana-oss:11.5.1
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
@@ -88,7 +88,6 @@ services:
 
   g3-ae-metrics:
     build: ./afferent-efferent/AfferentEfferentService
-    profiles: ["manual"]
     stdin_open: true
     tty: true
     volumes:
@@ -106,11 +105,44 @@ services:
       - PORT=${MIDDLEWARE_PORT:-4002}
       - G7_PMD_URL=http://g7-pmd:4000
       - G6_METRICS_URL=http://g6-metrics:8080
-      - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"}]}
+      - G3_AE_URL=http://g3-ae-metrics:8080
+      - SERVICE_ROUTES_JSON={"routes":[{"route":"pmd","api":"http://g7-pmd:4000"},{"route":"mongo","api":"http://g7-mongo:4001"},{"route":"ae","api":"http://g3-ae-metrics:8080"}]}
     depends_on:
       - g7-mongo
+      - g3-ae-metrics
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - g6-metrics
+      - middlewares
+      - g7-pmd
 
+  metrics-writer:
+    build: ./prometheus/metrics-writer
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - WRITE_INTERVAL_MS=15000
+      - SUPABASE_DB_URL=postgresql://postgres.ouogetytffnkwjdiqjxv:ser516metrics@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  taiga-service:
+    build: ./taiga-service
+    ports:
+      - "${TAIGA_SERVICE_PORT:-8083}:8080"
+    environment:
+      - TAIGA_BASE_URL=${TAIGA_BASE_URL}
+      - TAIGA_USERNAME=${TAIGA_USERNAME}
+      - TAIGA_PASSWORD=${TAIGA_PASSWORD}
+      - JDBC_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+      - JDBC_USER=postgres.ouogetytffnkwjdiqjxv
+      - JDBC_PASSWORD=ser516metrics
 
 volumes:
   g7-workdata:

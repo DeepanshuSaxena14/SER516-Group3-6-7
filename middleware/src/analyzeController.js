@@ -2,6 +2,7 @@ import axios from "axios";
 
 const G7_PMD_URL = process.env.G7_PMD_URL || "http://g7-pmd:4000";
 const G6_METRICS_URL = process.env.G6_METRICS_URL || "http://g6-metrics:8080";
+const G3_AE_URL = process.env.G3_AE_URL || "http://g3-ae-metrics:8080";
 
 export const analyzeRepo = async (req, res) => {
     const { github_link } = req.body;
@@ -16,10 +17,11 @@ export const analyzeRepo = async (req, res) => {
         github_link,
         pmd: null,
         metrics: null,
+        afferentEfferent: null,
         errors: [],
     };
 
-    const [pmdResult, metricsResult] = await Promise.allSettled([
+    const [pmdResult, metricsResult, aeResult] = await Promise.allSettled([
 
         axios.get(
             `${G7_PMD_URL}/api/pmd/analyze?github_link=${github_link}`,
@@ -32,6 +34,12 @@ export const analyzeRepo = async (req, res) => {
                 params: { github_link },
                 timeout: 180000
             }
+        ),
+
+        axios.post(
+            `${G3_AE_URL}/api/analyze`,
+            { github_link },
+            { timeout: 180000 }
         ),
     ]);
 
@@ -49,6 +57,14 @@ export const analyzeRepo = async (req, res) => {
     } else {
         results.errors.push({ service: "g6-metrics", error: metricsResult.reason.message });
         console.error("Fan-In/Fan-Out analysis failed:", metricsResult.reason.message);
+    }
+
+    if (aeResult.status === "fulfilled") {
+        results.afferentEfferent = aeResult.value.data;
+        console.log("Afferent/Efferent analysis complete");
+    } else {
+        results.errors.push({ service: "ae", error: aeResult.reason.message });
+        console.error("Afferent/Efferent analysis failed:", aeResult.reason.message);
     }
 
     return res.status(200).json(results);

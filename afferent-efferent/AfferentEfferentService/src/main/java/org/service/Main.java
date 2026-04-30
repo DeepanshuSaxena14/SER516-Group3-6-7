@@ -20,8 +20,11 @@ public class Main {
     // public int choice = 1;
 
     public static void main(String[] args) {
-        welcomeUser();
-
+        if (args.length > 0 && args[0].equals("--cli")) {
+            welcomeUser();
+        } else {
+            AeApiServer.start();
+        }
     }
 
     public static void welcomeUser() {

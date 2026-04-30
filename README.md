@@ -1,6 +1,7 @@
 # SER516-Group3-6-7
 The code repository for Groups 3, 6, and 7 to compute different metrics of a project.
 
+
 # Project Structure
 
 ```text
@@ -9,7 +10,14 @@ SER516-Group3-6-7/
 ├── defects-discovered/        # Group 7 — PMD defect analysis + frontend
 ├── fanin-fanout/              # Group 6 — Fan-In/Fan-Out coupling metrics
 ├── middleware/                # Shared middleware — orchestrates all services
-└── docker-compose.yml         # Root Docker Compose file
+├── prometheus/
+│   ├── prometheus.yml         # Prometheus scrape config (all 3 services)
+│   └── metrics-writer/        # Bridge service: Prometheus → Supabase
+│       ├── index.js
+│       ├── package.json
+│       ├── Dockerfile
+│       └── supabase-migration.sql
+├── docker-compose.yml         # Root Docker Compose file
 └── Jenkinsfile                # Root Jenkins automations file
 ```
 
@@ -26,9 +34,9 @@ docker --version
 docker compose version
 ```
 
-## Environment Setup
+#Environment Setup
 
-# Start integrated services
+## Start integrated services
 ```bash
 docker compose up --build
 ```
@@ -55,20 +63,34 @@ docker compose up --build
    - Defects - https://swent0linux.asu.edu/grafana/d/defect-analysis-dashboard/defect-analysis-dashboard?orgId=7&from=now-7d&to=now&timezone=browser&var-min_priority=5&var-file_filter=
    - FanIn - https://swent0linux.asu.edu/grafana/d/fan-in-metrics/fan-in-metrics-dashboard?orgId=7&from=now-7d&to=now&timezone=browser&var-min_fanin=0&var-class_filter=
    - FanOut - https://swent0linux.asu.edu/grafana/d/fan-out-metrics/fan-out-metrics-dashboard?orgId=7&from=now-7d&to=now&timezone=browser&var-min_fanout=0&var-class_filter=
-
-> [!NOTE]
-> #### Afferent/Efferent Service (Group 3)
-> The AE service is not exposed as a browser-based service. It runs interactively via Docker:
-> ```bash
-> docker compose run --rm g3-ae-metrics
-> ```
-> Select option `2` to analyze a GitHub repository. Results are persisted to the `afferent_efferent_result` table in Supabase.
-
-> [!NOTE]
-> GitHub repository URLs **must end with `.git`** for cloning to work correctly with JGit.
-> Example: `https://github.com/junit-team/junit4.git`
+   - Observability - https://swent0linux.asu.edu/grafana/d/ser516-observability/service-observability-metric?orgId=7&from=now-24h&to=now&timezone=browser&refresh=30s
 
 ---
+
+## Prometheus Observability
+
+All three services are instrumented with Prometheus and expose a `/prometheus` scrape endpoint:
+
+| Service | Technology | Endpoint |
+|---|---|---|
+| `g6-metrics` | Java / Javalin + Micrometer | `http://localhost:8082/prometheus` |
+| `middlewares` | Node.js / Express + prom-client | `http://localhost:4002/prometheus` |
+| `g7-pmd` | Node.js / Express + prom-client | `http://localhost:4000/prometheus` |
+
+The `prometheus` container (port `9090`) scrapes all three every 15 seconds. Verify targets at **http://localhost:9090/targets**.
+
+### Metrics collected per service
+
+|            Metric              | `g6-metrics` | `middleware` | `g7-pmd` |
+|--------------------------------|--------------|--------------|----------|
+| HTTP request rate              | (Micrometer) |       —      |    —     |
+| HTTP error rate (4xx/5xx)      | (Micrometer) |       —      |    —     |
+| `/analyze` latency p50/p95/p99 | (Micrometer) |       —      |    —     |
+| JVM heap used / max            |     Yes      |       —      |    —     |
+| CPU usage rate                 |     Yes      |      Yes     |    Yes   |
+| Node.js heap used              |      —       |      Yes     |    Yes   |
+| Event loop lag p50/p95/p99     |      —       |      Yes     |    Yes   |
+
 
 ## Jenkins
 We have automation pipelines set to update Grafana, run available static analysis and unit tests whenever there is a push on any branch.
@@ -76,3 +98,7 @@ We have automation pipelines set to update Grafana, run available static analysi
 - Jenkins URL: https://swent0linux.asu.edu/jenkins/job/Group-3-Group-6-Group-7/job/SER516-Group3-6-7/
 
 ---
+
+## Things that are incomplete or redundant
+- There is a taiga-service folder and dashboard in grafana but are incomplete.
+- We have multiple mongodb apis among others that we dont use and need to remove.

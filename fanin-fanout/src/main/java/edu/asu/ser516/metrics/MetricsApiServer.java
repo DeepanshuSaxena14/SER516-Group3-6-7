@@ -2,8 +2,19 @@ package edu.asu.ser516.metrics;
 
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -13,10 +24,30 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public final class MetricsApiServer {
 
     private MetricsApiServer() {
     }
+
+    private static final PrometheusMeterRegistry PROMETHEUS_REGISTRY = new PrometheusMeterRegistry(
+            PrometheusConfig.DEFAULT);
+
+    static {
+        // Bind standard JVM metrics: memory, GC, threads, CPU, class loading
+        new JvmMemoryMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmGcMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new JvmThreadMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ClassLoaderMetrics().bindTo(PROMETHEUS_REGISTRY);
+        new ProcessorMetrics().bindTo(PROMETHEUS_REGISTRY);
+    }
+    private static final String TAIGA_SERVICE_URL = System.getenv().getOrDefault("TAIGA_SERVICE_URL",
+            "http://taiga-service:8080");
+
+    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     // -------------------------------------------------------------------------
     // Scope enum
@@ -34,21 +65,33 @@ public final class MetricsApiServer {
         return Javalin.create(config -> {
             config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost()));
         })
+                .get("/prometheus", MetricsApiServer::handlePrometheus)
                 .get("/metrics/fanout", MetricsApiServer::handleFanOut)
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
-                .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods);
+                .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
+                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
+                .get("/metrics/taiga/focus-factor", MetricsApiServer::handleTaigaFocusFactor)
+                .get("/taiga/stories", MetricsApiServer::handleTaigaStories)
+                .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint)
+                .get("/health", ctx -> ctx.result("OK"));
     }
 
     public static void main(String[] args) {
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         create().start(port);
         System.out.println("Metrics API server started on port " + port);
+        System.out.println("Prometheus metrics available at http://localhost:" + port + "/prometheus");
     }
 
     // -------------------------------------------------------------------------
     // Handlers
     // -------------------------------------------------------------------------
+
+    private static void handlePrometheus(Context ctx) {
+        ctx.contentType("text/plain; version=0.0.4; charset=utf-8");
+        ctx.result(PROMETHEUS_REGISTRY.scrape());
+    }
 
     private static void handleFanOut(Context ctx) {
         Path root;
@@ -241,6 +284,225 @@ public final class MetricsApiServer {
         } catch (Exception e) {
             ctx.status(500);
             sendError(ctx, "Analysis failed for repo: " + repoUrl + " — " + e.getMessage());
+        }
+    }
+
+    /**
+     * GET /metrics/taiga/auc?project_id=&lt;int&gt;&amp;sprint_id=&lt;int&gt;
+     *
+     * Authenticates against the Taiga API using credentials supplied via the
+     * {@code TAIGA_USERNAME} / {@code TAIGA_PASSWORD} environment variables,
+     * fetches user stories for the requested sprint, computes the Area Under
+     * the Curve (AUC) metric via {@link AucService}, and returns a JSON
+     * summary containing {@code aucWork}, {@code aucValue}, and
+     * {@code aucRatio}.
+     */
+    private static void handleTaigaAuc(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+        String sprintIdParam = ctx.queryParam("sprint_id");
+
+        int projectId, sprintId;
+        try {
+            if (projectIdParam == null || projectIdParam.isBlank())
+                throw new NumberFormatException("missing");
+            projectId = Integer.parseInt(projectIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'project_id' is required and must be an integer.");
+            return;
+        }
+        try {
+            if (sprintIdParam == null || sprintIdParam.isBlank())
+                throw new NumberFormatException("missing");
+            sprintId = Integer.parseInt(sprintIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'sprint_id' is required and must be an integer.");
+            return;
+        }
+
+        try {
+            // --- Fetch sprint dates from taiga-service ---
+            HttpRequest sprintReq = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/sprint?sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> sprintResp = HTTP.send(sprintReq, HttpResponse.BodyHandlers.ofString());
+            if (sprintResp.statusCode() != 200) {
+                ctx.status(502);
+                sendError(ctx, "taiga-service sprint fetch failed: " + sprintResp.body());
+                return;
+            }
+            Map<String, Object> sprintData = MAPPER.readValue(sprintResp.body(), new TypeReference<>() {
+            });
+            String sprintStart = (String) sprintData.get("sprintStart");
+            String sprintEnd = (String) sprintData.get("sprintEnd");
+
+            if (sprintStart == null || sprintStart.isBlank()) {
+                ctx.status(422);
+                sendError(ctx, "Could not retrieve sprint start date for sprint_id=" + sprintId);
+                return;
+            }
+            if (sprintEnd == null || sprintEnd.isBlank()) {
+                ctx.status(422);
+                sendError(ctx, "Could not retrieve sprint end date for sprint_id=" + sprintId);
+                return;
+            }
+
+            // --- Fetch stories from taiga-service ---
+            HttpRequest storiesReq = HttpRequest.newBuilder()
+                    .uri(URI.create(
+                            TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> storiesResp = HTTP.send(storiesReq, HttpResponse.BodyHandlers.ofString());
+            if (storiesResp.statusCode() != 200) {
+                ctx.status(502);
+                sendError(ctx, "taiga-service stories fetch failed: " + storiesResp.body());
+                return;
+            }
+            List<Map<String, Object>> stories = MAPPER.readValue(storiesResp.body(), new TypeReference<>() {
+            });
+
+            // --- Compute AUC ---
+            AucService.AucResult auc = AucService.compute(stories, sprintStart, sprintEnd);
+
+            // --- Return JSON response ---
+            ctx.contentType("application/json");
+            ctx.result("{"
+                    + "\"projectId\":" + projectId + ","
+                    + "\"sprintId\":" + sprintId + ","
+                    + "\"sprintStart\":\"" + jsonEscape(sprintStart) + "\","
+                    + "\"sprintEnd\":\"" + jsonEscape(sprintEnd) + "\","
+                    + "\"aucWork\":" + auc.aucWork() + ","
+                    + "\"aucValue\":" + auc.aucValue() + ","
+                    + "\"aucRatio\":" + auc.aucRatio()
+                    + "}");
+
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Taiga AUC computation failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * GET /metrics/taiga/focus-factor?project_id=&lt;int&gt;
+     *
+     * Fetches all sprints for the given project, computes focus factor
+     * (velocity / work capacity) per sprint, and returns a JSON array.
+     */
+    private static void handleTaigaFocusFactor(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+
+        if (projectIdParam == null || projectIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'project_id' is required and must be an integer.");
+            return;
+        }
+
+        int projectId;
+        try {
+            projectId = Integer.parseInt(projectIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'project_id' is required and must be an integer.");
+            return;
+        }
+
+        try {
+            // fetch all sprints for the project
+            HttpRequest sprintsReq = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/sprints?project_id=" + projectId))
+                    .GET().build();
+            HttpResponse<String> sprintsResp = HTTP.send(sprintsReq, HttpResponse.BodyHandlers.ofString());
+            if (sprintsResp.statusCode() != 200) {
+                ctx.status(502);
+                sendError(ctx, "taiga-service sprints fetch failed: " + sprintsResp.body());
+                return;
+            }
+            List<Map<String, Object>> sprints = MAPPER.readValue(sprintsResp.body(), new TypeReference<>() {
+            });
+
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < sprints.size(); i++) {
+                Map<String, Object> sprint = sprints.get(i);
+                int sprintId = ((Number) sprint.get("id")).intValue();
+                String sprintName = String.valueOf(sprint.get("name"));
+                String sprintStart = sprint.get("estimated_start") != null ? sprint.get("estimated_start").toString()
+                        : "";
+                String sprintEnd = sprint.get("estimated_finish") != null ? sprint.get("estimated_finish").toString()
+                        : "";
+
+                // fetch stories for this sprint
+                HttpRequest storiesReq = HttpRequest.newBuilder()
+                        .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id="
+                                + sprintId))
+                        .GET().build();
+                HttpResponse<String> storiesResp = HTTP.send(storiesReq, HttpResponse.BodyHandlers.ofString());
+                List<Map<String, Object>> stories = storiesResp.statusCode() == 200
+                        ? MAPPER.readValue(storiesResp.body(), new TypeReference<>() {
+                        })
+                        : List.of();
+
+                FocusFactorService.FocusFactorResult result = FocusFactorService.compute(
+                        sprintId, sprintName, sprintStart, sprintEnd, stories);
+
+                if (i > 0)
+                    sb.append(",");
+                sb.append("{")
+                        .append("\"sprintId\":").append(result.sprintId()).append(",")
+                        .append("\"sprintName\":\"").append(jsonEscape(result.sprintName())).append("\",")
+                        .append("\"sprintStart\":\"").append(jsonEscape(result.sprintStart())).append("\",")
+                        .append("\"sprintEnd\":\"").append(jsonEscape(result.sprintEnd())).append("\",")
+                        .append("\"velocity\":").append(result.velocity()).append(",")
+                        .append("\"workCapacity\":").append(result.workCapacity()).append(",")
+                        .append("\"focusFactor\":").append(result.focusFactor())
+                        .append("}");
+            }
+            sb.append("]");
+
+            ctx.contentType("application/json");
+            ctx.result(sb.toString());
+
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Focus factor computation failed: " + e.getMessage());
+        }
+    }
+
+    private static void handleTaigaStories(Context ctx) {
+        String projectId = ctx.queryParam("project_id");
+        String sprintId = ctx.queryParam("sprint_id");
+        if (projectId == null || sprintId == null) {
+            sendError(ctx, "project_id and sprint_id are required query parameters.");
+            return;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(
+                            TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to proxy stories request to taiga-service: " + e.getMessage());
+        }
+    }
+
+    private static void handleTaigaSprint(Context ctx) {
+        String sprintId = ctx.queryParam("sprint_id");
+        if (sprintId == null) {
+            sendError(ctx, "sprint_id is a required query parameter.");
+            return;
+        }
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/sprint?sprint_id=" + sprintId))
+                    .GET().build();
+            HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to proxy sprint request to taiga-service: " + e.getMessage());
         }
     }
 

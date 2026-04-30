@@ -1,0 +1,13 @@
+{
+  "name": "metrics-writer",
+  "version": "1.0.0",
+  "description": "Reads Prometheus metrics and writes them to Supabase PostgreSQL so the hosted Grafana can visualise them.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.3"
+  }
+}
