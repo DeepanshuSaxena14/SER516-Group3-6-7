@@ -51,7 +51,8 @@ public final class MetricsApiServer {
                 .get("/metrics/fanin", MetricsApiServer::handleFanIn)
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
-                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc);
+                .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
+                .get("/metrics/taiga/project_velocity", MetricsApiServer::handleProjectVelocity);
     }
 
     public static void main(String[] args) {
@@ -348,6 +349,49 @@ public final class MetricsApiServer {
         } catch (Exception e) {
             ctx.status(500);
             sendError(ctx, "Taiga AUC computation failed: " + e.getMessage());
+        }
+    }
+
+    private static void handleProjectVelocity(Context ctx) {
+        String projectIdParam = ctx.queryParam("project_id");
+        if (projectIdParam == null || projectIdParam.isBlank()) {
+            ctx.status(400);
+            sendError(ctx, "Query parameter 'project_id' is required.");
+            return;
+        }
+
+        int projectId;
+        try {
+            projectId = Integer.parseInt(projectIdParam.trim());
+        } catch (NumberFormatException e) {
+            ctx.status(400);
+            sendError(ctx, "project_id must be an integer.");
+            return;
+        }
+
+        try {
+            // --- Fetch project velocity from taiga-service ---
+            HttpRequest velocityReq = HttpRequest.newBuilder()
+                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/project_velocity?project_id=" + projectId))
+                    .GET().build();
+            HttpResponse<String> velocityResp = HTTP.send(velocityReq, HttpResponse.BodyHandlers.ofString());
+            if (velocityResp.statusCode() != 200) {
+                ctx.status(502);
+                sendError(ctx, "taiga-service project_velocity fetch failed: " + velocityResp.body());
+                return;
+            }
+            Map<String, Object> velocities = MAPPER.readValue(velocityResp.body(), new TypeReference<>() {});
+
+            // --- Write to database ---
+            MetricDbWriter.writeProjectVelocity(velocities, projectId);
+
+            // --- Return JSON response ---
+            ctx.contentType("application/json");
+            ctx.result(MAPPER.writeValueAsString(velocities));
+
+        } catch (Exception e) {
+            ctx.status(500);
+            sendError(ctx, "Failed to fetch project velocity: " + e.getMessage());
         }
     }
 

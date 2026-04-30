@@ -11,10 +11,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.cert.X509Certificate;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -37,36 +33,6 @@ public final class TaigaClient {
     public TaigaClient(String baseUrl) {
         this.baseUrl = baseUrl;
         this.http = buildHttpClient();
-    }
-
-    private static Connection getDbConnection() throws SQLException {
-        String jdbcUrl = System.getenv("JDBC_URL");
-        String jdbcUser = System.getenv("JDBC_USER");
-        String jdbcPassword = System.getenv("JDBC_PASSWORD");
-        
-        if (jdbcUrl == null || jdbcUser == null || jdbcPassword == null) {
-            throw new SQLException("Database credentials not set: JDBC_URL, JDBC_USER, JDBC_PASSWORD required");
-        }
-        
-        return DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPassword);
-    }
-
-    private static void writeProjectVelocityToDb(int projectId, int sprintId, String sprintName,
-                                                  Object sprintStart, Object sprintEnd, int velocity)
-            throws SQLException {
-        String sql = "INSERT INTO public.sprint_velocity (project_id, sprint_id, sprint_name, sprint_start_date, sprint_end_date, velocity) " +
-                     "VALUES (?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = getDbConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, projectId);
-            stmt.setInt(2, sprintId);
-            stmt.setString(3, sprintName);
-            stmt.setString(4, sprintStart != null ? sprintStart.toString() : null);
-            stmt.setString(5, sprintEnd != null ? sprintEnd.toString() : null);
-            stmt.setInt(6, velocity);
-            stmt.executeUpdate();
-        }
     }
 
     private static HttpClient buildHttpClient() {
@@ -256,13 +222,6 @@ public final class TaigaClient {
             sprintVelocity.put("velocity", velocity);
             
             velocities.put(String.valueOf(sprintId), sprintVelocity);
-            
-            // write to database
-            try {
-                writeProjectVelocityToDb(projectId, sprintId, sprintName, sprintStart, sprintEnd, velocity);
-            } catch (SQLException e) {
-                System.err.println("Warning: Failed to write velocity to database: " + e.getMessage());
-            }
         }
 
         return velocities;
