@@ -1,6 +1,7 @@
 # SER516-Group3-6-7
 The code repository for Groups 3, 6, and 7 to compute different metrics of a project.
 
+
 # Project Structure
 
 ```text
@@ -62,20 +63,12 @@ docker compose up --build
    - Defects - https://swent0linux.asu.edu/grafana/d/defect-analysis-dashboard/defect-analysis-dashboard?orgId=7&from=now-7d&to=now&timezone=browser&var-min_priority=5&var-file_filter=
    - FanIn - https://swent0linux.asu.edu/grafana/d/fan-in-metrics/fan-in-metrics-dashboard?orgId=7&from=now-7d&to=now&timezone=browser&var-min_fanin=0&var-class_filter=
    - FanOut - https://swent0linux.asu.edu/grafana/d/fan-out-metrics/fan-out-metrics-dashboard?orgId=7&from=now-7d&to=now&timezone=browser&var-min_fanout=0&var-class_filter=
-
-> [!NOTE]
-> #### Afferent/Efferent Service (Group 3)
-> The AE service is not exposed as a browser-based service. It runs interactively via Docker:
-> ```bash
-> docker compose run --rm g3-ae-metrics
-> ```
-> Select option `2` to analyze a GitHub repository. Results are persisted to the `afferent_efferent_result` table in Supabase.
-
-> [!NOTE]
-> GitHub repository URLs **must end with `.git`** for cloning to work correctly with JGit.
-> Example: `https://github.com/junit-team/junit4.git`
+   - Observability - https://swent0linux.asu.edu/grafana/d/ser516-observability/service-observability-metric?orgId=7&from=now-24h&to=now&timezone=browser&refresh=30s
 
 ---
+
+> [!NOTE]
+> There is a taiga-service folder and dashboard in grafana but are incomplete. 
 
 ## Prometheus Observability
 
@@ -101,58 +94,6 @@ The `prometheus` container (port `9090`) scrapes all three every 15 seconds. Ver
 | Node.js heap used              |      —       |      Yes     |    Yes   |
 | Event loop lag p50/p95/p99     |      —       |      Yes     |    Yes   |
 
-### Metrics Writer — Prometheus → Supabase bridge
-
-Because the hosted Grafana on `swent0linux.asu.edu` cannot directly reach a local Prometheus instance, a `metrics-writer` Docker service reads from the Prometheus HTTP API every 15 seconds and writes snapshots into the `observability_metrics` table in Supabase. The hosted Grafana then queries this table through its existing PostgreSQL datasource — no new datasource or server access required.
-
-```
-Local Docker                              Cloud
-services → Prometheus (:9090)
-                  ↓
-           metrics-writer ──────────►  Supabase (observability_metrics)
-                                                ↑
-                                     hosted Grafana reads via PostgreSQL
-```
-
-#### One-time Supabase setup
-
-Run the migration **once** in the Supabase SQL Editor (Dashboard → SQL Editor):
-
-```sql
--- full script: prometheus/metrics-writer/supabase-migration.sql
-CREATE TABLE IF NOT EXISTS observability_metrics (
-  id         BIGSERIAL        PRIMARY KEY,
-  service    TEXT             NOT NULL,
-  metric     TEXT             NOT NULL,
-  value      DOUBLE PRECISION NOT NULL,
-  scraped_at TIMESTAMPTZ      NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_obs_service_metric_time
-  ON observability_metrics (service, metric, scraped_at DESC);
-```
-
-#### Observability Dashboard
-
-Import `fanin-fanout/grafana/dashboards/observability.json` into the hosted Grafana
-(**Dashboards → Import → Upload JSON file**). The dashboard uses the existing
-`postgres-metrics` datasource (Supabase) and shows:
-
-- **Event loop lag** (p50 / p95 / p99) — middleware & g7-pmd
-- **Node.js heap used** — middleware & g7-pmd
-- **CPU usage rate** — all three services
-- **JVM heap used vs max + utilisation gauge** — g6-metrics
-- **HTTP request rate & error rate** — g6-metrics *(populates after first request)*
-- **/analyze latency** (p50 / p95 / p99) — g6-metrics *(populates after first request)*
-
-> [!NOTE]
-> The HTTP request rate and latency panels show "No data" until at least one request
-> has been made to g6-metrics. Send a test request to populate them:
-> ```bash
-> curl "http://localhost:8082/metrics/fanout?path=/input/Simple-Java-Calculator/src"
-> ```
-> Wait ~30 seconds (one Prometheus scrape + one writer cycle), then refresh the dashboard.
-
----
 
 ## Jenkins
 We have automation pipelines set to update Grafana, run available static analysis and unit tests whenever there is a push on any branch.
