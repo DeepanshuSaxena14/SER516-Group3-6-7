@@ -71,7 +71,7 @@ public final class MetricsApiServer {
                 .get("/metrics/analyze", MetricsApiServer::handleAnalyze)
                 .get("/metrics/fanin/methods", MetricsApiServer::handleFanInMethods)
                 .get("/metrics/taiga/auc", MetricsApiServer::handleTaigaAuc)
-                .get("/metrics/taiga/focus-factor", MetricsApiServer::handleTaigaFocusFactor);
+                .get("/metrics/taiga/focus-factor", MetricsApiServer::handleTaigaFocusFactor)
                 .get("/taiga/stories", MetricsApiServer::handleTaigaStories)
                 .get("/taiga/sprint", MetricsApiServer::handleTaigaSprint)
                 .get("/health", ctx -> ctx.result("OK"));
@@ -332,7 +332,8 @@ public final class MetricsApiServer {
                 sendError(ctx, "taiga-service sprint fetch failed: " + sprintResp.body());
                 return;
             }
-            Map<String, Object> sprintData = MAPPER.readValue(sprintResp.body(), new TypeReference<>() {});
+            Map<String, Object> sprintData = MAPPER.readValue(sprintResp.body(), new TypeReference<>() {
+            });
             String sprintStart = (String) sprintData.get("sprintStart");
             String sprintEnd = (String) sprintData.get("sprintEnd");
 
@@ -349,7 +350,8 @@ public final class MetricsApiServer {
 
             // --- Fetch stories from taiga-service ---
             HttpRequest storiesReq = HttpRequest.newBuilder()
-                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .uri(URI.create(
+                            TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
                     .GET().build();
             HttpResponse<String> storiesResp = HTTP.send(storiesReq, HttpResponse.BodyHandlers.ofString());
             if (storiesResp.statusCode() != 200) {
@@ -357,7 +359,8 @@ public final class MetricsApiServer {
                 sendError(ctx, "taiga-service stories fetch failed: " + storiesResp.body());
                 return;
             }
-            List<Map<String, Object>> stories = MAPPER.readValue(storiesResp.body(), new TypeReference<>() {});
+            List<Map<String, Object>> stories = MAPPER.readValue(storiesResp.body(), new TypeReference<>() {
+            });
 
             // --- Compute AUC ---
             AucService.AucResult auc = AucService.compute(stories, sprintStart, sprintEnd);
@@ -415,29 +418,35 @@ public final class MetricsApiServer {
                 sendError(ctx, "taiga-service sprints fetch failed: " + sprintsResp.body());
                 return;
             }
-            List<Map<String, Object>> sprints = MAPPER.readValue(sprintsResp.body(), new TypeReference<>() {});
+            List<Map<String, Object>> sprints = MAPPER.readValue(sprintsResp.body(), new TypeReference<>() {
+            });
 
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < sprints.size(); i++) {
                 Map<String, Object> sprint = sprints.get(i);
                 int sprintId = ((Number) sprint.get("id")).intValue();
                 String sprintName = String.valueOf(sprint.get("name"));
-                String sprintStart = sprint.get("estimated_start") != null ? sprint.get("estimated_start").toString() : "";
-                String sprintEnd = sprint.get("estimated_finish") != null ? sprint.get("estimated_finish").toString() : "";
+                String sprintStart = sprint.get("estimated_start") != null ? sprint.get("estimated_start").toString()
+                        : "";
+                String sprintEnd = sprint.get("estimated_finish") != null ? sprint.get("estimated_finish").toString()
+                        : "";
 
                 // fetch stories for this sprint
                 HttpRequest storiesReq = HttpRequest.newBuilder()
-                        .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                        .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id="
+                                + sprintId))
                         .GET().build();
                 HttpResponse<String> storiesResp = HTTP.send(storiesReq, HttpResponse.BodyHandlers.ofString());
                 List<Map<String, Object>> stories = storiesResp.statusCode() == 200
-                        ? MAPPER.readValue(storiesResp.body(), new TypeReference<>() {})
+                        ? MAPPER.readValue(storiesResp.body(), new TypeReference<>() {
+                        })
                         : List.of();
 
                 FocusFactorService.FocusFactorResult result = FocusFactorService.compute(
                         sprintId, sprintName, sprintStart, sprintEnd, stories);
 
-                if (i > 0) sb.append(",");
+                if (i > 0)
+                    sb.append(",");
                 sb.append("{")
                         .append("\"sprintId\":").append(result.sprintId()).append(",")
                         .append("\"sprintName\":\"").append(jsonEscape(result.sprintName())).append("\",")
@@ -458,7 +467,7 @@ public final class MetricsApiServer {
             sendError(ctx, "Focus factor computation failed: " + e.getMessage());
         }
     }
-  
+
     private static void handleTaigaStories(Context ctx) {
         String projectId = ctx.queryParam("project_id");
         String sprintId = ctx.queryParam("sprint_id");
@@ -468,7 +477,8 @@ public final class MetricsApiServer {
         }
         try {
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
+                    .uri(URI.create(
+                            TAIGA_SERVICE_URL + "/taiga/stories?project_id=" + projectId + "&sprint_id=" + sprintId))
                     .GET().build();
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
             ctx.status(resp.statusCode()).contentType("application/json").result(resp.body());
