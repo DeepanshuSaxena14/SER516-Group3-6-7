@@ -38,6 +38,7 @@ export const createApp = () => {
       routes: [
         { route: "/analyze", description: "POST — orchestrates all metric services" },
         { route: "/metrics/focus-factor", description: "GET exposes focus factor metric for dashboard integration" },
+        { route: "/metrics/cruft", description: "GET exposes cruft metric for dashboard integration" },
         ...serviceConfig.routes.map(({ route, api }) => ({ route, api })),
       ],
     });
@@ -50,6 +51,16 @@ export const createApp = () => {
       description: "Focus factor metric endpoint for Grafana dashboard integration",
       source: "TaigaService",
       route: "/metrics/focus-factor"
+    });
+  });
+
+  app.get("/metrics/cruft", (req, res) => {
+    res.json({
+      metric: "cruft",
+      status: "available",
+      description: "Cruft metric endpoint for Grafana dashboard integration",
+      source: "AfferentEfferentService",
+      route: "/metrics/cruft"
     });
   });
 
